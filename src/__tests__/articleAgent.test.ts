@@ -3,7 +3,11 @@ import type { ResearchResult, ArticlePlan } from '../types/index';
 
 // ---------- mock chat() ----------
 
-const mockChat = mock(() => Promise.resolve(''));
+function chatResult(content: string) {
+  return { content, usage: undefined };
+}
+
+const mockChat = mock(() => Promise.resolve(chatResult('')));
 
 mock.module('../clients/chat', () => ({
   chat: mockChat,
@@ -37,19 +41,19 @@ describe('ArticleAgent', () => {
 
   test('パイプライン全体が正しく動作し Article を返す', async () => {
     // ResearchAgent
-    mockChat.mockResolvedValueOnce(JSON.stringify(researchJson));
+    mockChat.mockResolvedValueOnce(chatResult(JSON.stringify(researchJson)));
 
     // PlanAgent
-    mockChat.mockResolvedValueOnce(JSON.stringify(planJson));
+    mockChat.mockResolvedValueOnce(chatResult(JSON.stringify(planJson)));
 
     // WriterAgent: intro + 1 section + conclusion = 3 calls
     mockChat
-      .mockResolvedValueOnce('導入文の内容')
-      .mockResolvedValueOnce('メインセクションの内容')
-      .mockResolvedValueOnce('まとめの内容');
+      .mockResolvedValueOnce(chatResult('導入文の内容'))
+      .mockResolvedValueOnce(chatResult('メインセクションの内容'))
+      .mockResolvedValueOnce(chatResult('まとめの内容'));
 
     // EditorAgent
-    mockChat.mockResolvedValueOnce('# 統合テスト記事\n\n最終的な記事本文');
+    mockChat.mockResolvedValueOnce(chatResult('# 統合テスト記事\n\n最終的な記事本文'));
 
     const agent = new ArticleAgent({ topic: '統合テスト' });
     const article = await agent.run();
@@ -70,14 +74,14 @@ describe('ArticleAgent', () => {
     try {
       // ResearchAgent の chat() 呼び出しはスキップされる
       // PlanAgent
-      mockChat.mockResolvedValueOnce(JSON.stringify(planJson));
+      mockChat.mockResolvedValueOnce(chatResult(JSON.stringify(planJson)));
       // WriterAgent: intro + 1 section + conclusion = 3 calls
       mockChat
-        .mockResolvedValueOnce('導入文の内容')
-        .mockResolvedValueOnce('メインセクションの内容')
-        .mockResolvedValueOnce('まとめの内容');
+        .mockResolvedValueOnce(chatResult('導入文の内容'))
+        .mockResolvedValueOnce(chatResult('メインセクションの内容'))
+        .mockResolvedValueOnce(chatResult('まとめの内容'));
       // EditorAgent
-      mockChat.mockResolvedValueOnce('# 統合テスト記事\n\nスキップ記事');
+      mockChat.mockResolvedValueOnce(chatResult('# 統合テスト記事\n\nスキップ記事'));
 
       const agent = new ArticleAgent({ topic: '統合テスト' });
       const article = await agent.run();
@@ -96,13 +100,13 @@ describe('ArticleAgent', () => {
   });
 
   test('デフォルト設定が適用される', async () => {
-    mockChat.mockResolvedValueOnce(JSON.stringify(researchJson));
+    mockChat.mockResolvedValueOnce(chatResult(JSON.stringify(researchJson)));
     mockChat
-      .mockResolvedValueOnce(JSON.stringify(planJson))
-      .mockResolvedValueOnce('導入')
-      .mockResolvedValueOnce('本文')
-      .mockResolvedValueOnce('まとめ')
-      .mockResolvedValueOnce('最終記事');
+      .mockResolvedValueOnce(chatResult(JSON.stringify(planJson)))
+      .mockResolvedValueOnce(chatResult('導入'))
+      .mockResolvedValueOnce(chatResult('本文'))
+      .mockResolvedValueOnce(chatResult('まとめ'))
+      .mockResolvedValueOnce(chatResult('最終記事'));
 
     const agent = new ArticleAgent({ topic: 'デフォルトテスト' });
     const article = await agent.run();
@@ -112,13 +116,13 @@ describe('ArticleAgent', () => {
   });
 
   test('英語設定で動作する', async () => {
-    mockChat.mockResolvedValueOnce(JSON.stringify(researchJson));
+    mockChat.mockResolvedValueOnce(chatResult(JSON.stringify(researchJson)));
     mockChat
-      .mockResolvedValueOnce(JSON.stringify(planJson))
-      .mockResolvedValueOnce('Introduction')
-      .mockResolvedValueOnce('Main content')
-      .mockResolvedValueOnce('Conclusion')
-      .mockResolvedValueOnce('Final article in English');
+      .mockResolvedValueOnce(chatResult(JSON.stringify(planJson)))
+      .mockResolvedValueOnce(chatResult('Introduction'))
+      .mockResolvedValueOnce(chatResult('Main content'))
+      .mockResolvedValueOnce(chatResult('Conclusion'))
+      .mockResolvedValueOnce(chatResult('Final article in English'));
 
     const agent = new ArticleAgent({ topic: 'English Test', language: 'en' });
     const article = await agent.run();
@@ -128,13 +132,13 @@ describe('ArticleAgent', () => {
   });
 
   test('API 呼び出し回数が正しい', async () => {
-    mockChat.mockResolvedValueOnce(JSON.stringify(researchJson));
+    mockChat.mockResolvedValueOnce(chatResult(JSON.stringify(researchJson)));
     mockChat
-      .mockResolvedValueOnce(JSON.stringify(planJson))
-      .mockResolvedValueOnce('導入')
-      .mockResolvedValueOnce('本文')
-      .mockResolvedValueOnce('まとめ')
-      .mockResolvedValueOnce('最終記事');
+      .mockResolvedValueOnce(chatResult(JSON.stringify(planJson)))
+      .mockResolvedValueOnce(chatResult('導入'))
+      .mockResolvedValueOnce(chatResult('本文'))
+      .mockResolvedValueOnce(chatResult('まとめ'))
+      .mockResolvedValueOnce(chatResult('最終記事'));
 
     const agent = new ArticleAgent({ topic: 'カウントテスト' });
     await agent.run();

@@ -2,7 +2,11 @@ import { describe, expect, test, mock, beforeEach } from 'bun:test';
 
 // ---------- mock chat() ----------
 
-const mockChat = mock(() => Promise.resolve(''));
+function chatResult(content: string) {
+  return { content, usage: undefined };
+}
+
+const mockChat = mock(() => Promise.resolve(chatResult('')));
 
 mock.module('../clients/chat', () => ({
   chat: mockChat,
@@ -24,7 +28,7 @@ describe('ReviewAgent', () => {
       feedback: '品質が十分です。',
       scores: { accuracy: 4, completeness: 4, clarity: 5, coherence: 4 },
     });
-    mockChat.mockResolvedValueOnce(approveResponse);
+    mockChat.mockResolvedValueOnce(chatResult(approveResponse));
 
     const agent = new ReviewAgent('ja');
     const result = await agent.review('research', '{"topic":"テスト"}');
@@ -43,7 +47,7 @@ describe('ReviewAgent', () => {
       feedback: '情報の網羅性が不足しています。',
       scores: { accuracy: 3, completeness: 2, clarity: 3, coherence: 3 },
     });
-    mockChat.mockResolvedValueOnce(reviseResponse);
+    mockChat.mockResolvedValueOnce(chatResult(reviseResponse));
 
     const agent = new ReviewAgent('ja');
     const result = await agent.review('plan', 'プランの内容');
@@ -59,7 +63,7 @@ describe('ReviewAgent', () => {
       feedback: 'OK',
       scores: { accuracy: 4, completeness: 4, clarity: 4, coherence: 4 },
     }) + '\n```';
-    mockChat.mockResolvedValueOnce(fenced);
+    mockChat.mockResolvedValueOnce(chatResult(fenced));
 
     const agent = new ReviewAgent('ja');
     const result = await agent.review('write', 'セクション内容');
@@ -68,7 +72,7 @@ describe('ReviewAgent', () => {
   });
 
   test('JSON パース失敗時は approve にフォールバック', async () => {
-    mockChat.mockResolvedValueOnce('これはJSONではありません');
+    mockChat.mockResolvedValueOnce(chatResult('これはJSONではありません'));
 
     const agent = new ReviewAgent('ja');
     const result = await agent.review('edit', '記事内容');
@@ -84,7 +88,7 @@ describe('ReviewAgent', () => {
       feedback: 'テスト',
       scores: { accuracy: 3, completeness: 3, clarity: 3, coherence: 3 },
     });
-    mockChat.mockResolvedValueOnce(invalidResponse);
+    mockChat.mockResolvedValueOnce(chatResult(invalidResponse));
 
     const agent = new ReviewAgent('ja');
     const result = await agent.review('research', 'テスト');
@@ -98,7 +102,7 @@ describe('ReviewAgent', () => {
       feedback: 'OK',
       scores: { accuracy: 4, completeness: 4, clarity: 4, coherence: 4 },
     });
-    mockChat.mockResolvedValueOnce(approveResponse);
+    mockChat.mockResolvedValueOnce(chatResult(approveResponse));
 
     const agent = new ReviewAgent('ja');
     await agent.review('research', 'テスト');

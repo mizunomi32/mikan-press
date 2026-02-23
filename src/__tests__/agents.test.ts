@@ -3,7 +3,11 @@ import type { ResearchResult, ArticlePlan } from '../types/index';
 
 // ---------- mock chat() ----------
 
-const mockChat = mock(() => Promise.resolve(''));
+function chatResult(content: string) {
+  return { content, usage: undefined };
+}
+
+const mockChat = mock(() => Promise.resolve(chatResult('')));
 
 mock.module('../clients/chat', () => ({
   chat: mockChat,
@@ -43,7 +47,7 @@ describe('ResearchAgent', () => {
   });
 
   test('正常な JSON をパースできる', async () => {
-    mockChat.mockResolvedValueOnce(JSON.stringify(validResearchJson));
+    mockChat.mockResolvedValueOnce(chatResult(JSON.stringify(validResearchJson)));
     const agent = new ResearchAgent('ja');
     const result = await agent.run('テスト');
 
@@ -54,7 +58,7 @@ describe('ResearchAgent', () => {
 
   test('コードフェンス付き JSON をパースできる', async () => {
     const fenced = '```json\n' + JSON.stringify(validResearchJson) + '\n```';
-    mockChat.mockResolvedValueOnce(fenced);
+    mockChat.mockResolvedValueOnce(chatResult(fenced));
     const agent = new ResearchAgent('ja');
     const result = await agent.run('テスト');
 
@@ -63,7 +67,7 @@ describe('ResearchAgent', () => {
   });
 
   test('不正な文字列でフォールバック構造を返す', async () => {
-    mockChat.mockResolvedValueOnce('これはJSONではありません');
+    mockChat.mockResolvedValueOnce(chatResult('これはJSONではありません'));
     const agent = new ResearchAgent('ja');
     const result = await agent.run('テスト');
 
@@ -83,7 +87,7 @@ describe('PlanAgent', () => {
   });
 
   test('正常な JSON をパースできる', async () => {
-    mockChat.mockResolvedValueOnce(JSON.stringify(validPlanJson));
+    mockChat.mockResolvedValueOnce(chatResult(JSON.stringify(validPlanJson)));
     const agent = new PlanAgent('ja');
     const result = await agent.run(validResearchJson);
 
@@ -93,7 +97,7 @@ describe('PlanAgent', () => {
 
   test('コードフェンス付き JSON をパースできる', async () => {
     const fenced = '```\n' + JSON.stringify(validPlanJson) + '\n```';
-    mockChat.mockResolvedValueOnce(fenced);
+    mockChat.mockResolvedValueOnce(chatResult(fenced));
     const agent = new PlanAgent('ja');
     const result = await agent.run(validResearchJson);
 
@@ -101,7 +105,7 @@ describe('PlanAgent', () => {
   });
 
   test('不正な文字列でフォールバック構造を返す', async () => {
-    mockChat.mockResolvedValueOnce('パースできない文字列');
+    mockChat.mockResolvedValueOnce(chatResult('パースできない文字列'));
     const agent = new PlanAgent('ja');
     const result = await agent.run(validResearchJson);
 
@@ -121,10 +125,10 @@ describe('WriterAgent', () => {
   test('intro + body sections + conclusion を返す', async () => {
     // intro, section1, section2, conclusion の 4 回呼ばれる
     mockChat
-      .mockResolvedValueOnce('導入文の内容')
-      .mockResolvedValueOnce('セクション1の内容')
-      .mockResolvedValueOnce('セクション2の内容')
-      .mockResolvedValueOnce('まとめの内容');
+      .mockResolvedValueOnce(chatResult('導入文の内容'))
+      .mockResolvedValueOnce(chatResult('セクション1の内容'))
+      .mockResolvedValueOnce(chatResult('セクション2の内容'))
+      .mockResolvedValueOnce(chatResult('まとめの内容'));
 
     const agent = new WriterAgent('ja');
     const result = await agent.run(validPlanJson, validResearchJson);
@@ -140,10 +144,10 @@ describe('WriterAgent', () => {
 
   test('レスポンスの前後空白が除去される', async () => {
     mockChat
-      .mockResolvedValueOnce('  導入文  ')
-      .mockResolvedValueOnce(' 本文1 ')
-      .mockResolvedValueOnce(' 本文2 ')
-      .mockResolvedValueOnce('  まとめ  ');
+      .mockResolvedValueOnce(chatResult('  導入文  '))
+      .mockResolvedValueOnce(chatResult(' 本文1 '))
+      .mockResolvedValueOnce(chatResult(' 本文2 '))
+      .mockResolvedValueOnce(chatResult('  まとめ  '));
 
     const agent = new WriterAgent('ja');
     const result = await agent.run(validPlanJson, validResearchJson);
@@ -161,7 +165,7 @@ describe('EditorAgent', () => {
   });
 
   test('校正結果を返す', async () => {
-    mockChat.mockResolvedValueOnce('  校正済みの記事本文  ');
+    mockChat.mockResolvedValueOnce(chatResult('  校正済みの記事本文  '));
     const agent = new EditorAgent('ja');
     const article = {
       title: 'テスト',

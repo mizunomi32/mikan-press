@@ -21,7 +21,7 @@ export class EditorAgent {
     if (feedback) {
       prompt += `\n\n## 前回のレビューフィードバック\n以下の点を改善してください:\n${feedback}`;
     }
-    const result = await chat(this.modelSpec, [{ role: 'user', content: prompt }], {
+    const { content: result } = await chat(this.modelSpec, [{ role: 'user', content: prompt }], {
       temperature: 0.5,
     });
     logger.info('[EditorAgent] 校正完了');

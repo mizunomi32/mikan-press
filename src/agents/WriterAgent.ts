@@ -31,7 +31,7 @@ export class WriterAgent {
     const sections: ArticleSection[] = [];
 
     // Introduction
-    const introContent = await chat(this.modelSpec, [
+    const { content: introContent } = await chat(this.modelSpec, [
       { role: 'user', content: buildIntroPrompt(plan, research, this.language) + feedbackSuffix },
     ]);
     sections.push({ title: '__intro', content: introContent.trim() });
@@ -39,7 +39,7 @@ export class WriterAgent {
 
     // Body sections (sequential to maintain coherence)
     for (const section of plan.sections) {
-      const content = await chat(this.modelSpec, [
+      const { content } = await chat(this.modelSpec, [
         {
           role: 'user',
           content: buildSectionPrompt(
@@ -55,7 +55,7 @@ export class WriterAgent {
     }
 
     // Conclusion
-    const conclusionContent = await chat(this.modelSpec, [
+    const { content: conclusionContent } = await chat(this.modelSpec, [
       { role: 'user', content: buildConclusionPrompt(plan, this.language) },
     ]);
     sections.push({ title: '__conclusion', content: conclusionContent.trim() });

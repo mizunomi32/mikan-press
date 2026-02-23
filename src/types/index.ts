@@ -48,6 +48,17 @@ export interface Article {
   };
 }
 
+export interface ChatUsage {
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+}
+
+export interface ChatResult {
+  content: string;
+  usage?: ChatUsage;
+}
+
 export type WorkflowStage = 'research' | 'plan' | 'write' | 'edit';
 
 export interface ReviewResult {

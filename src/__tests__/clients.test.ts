@@ -2,8 +2,12 @@ import { describe, expect, test, mock, beforeEach } from 'bun:test';
 
 // ---------- GLM client tests ----------
 
+function chatResult(content: string) {
+  return { content, usage: undefined };
+}
+
 describe('glmChat (mocked)', () => {
-  const mockGlmChat = mock(() => Promise.resolve(''));
+  const mockGlmChat = mock(() => Promise.resolve(chatResult('')));
 
   mock.module('../clients/glm', () => ({
     glmChat: mockGlmChat,
@@ -11,14 +15,14 @@ describe('glmChat (mocked)', () => {
 
   beforeEach(() => {
     mockGlmChat.mockReset();
-    mockGlmChat.mockResolvedValue('GLMの応答');
+    mockGlmChat.mockResolvedValue(chatResult('GLMの応答'));
   });
 
   test('メッセージを送信して応答を取得できる', async () => {
     const { glmChat } = await import('../clients/glm');
     const result = await glmChat([{ role: 'user', content: 'テスト' }]);
 
-    expect(result).toBe('GLMの応答');
+    expect(result.content).toBe('GLMの応答');
     expect(mockGlmChat).toHaveBeenCalledTimes(1);
   });
 
@@ -42,18 +46,18 @@ describe('glmChat (mocked)', () => {
   });
 
   test('空文字を返すケース', async () => {
-    mockGlmChat.mockResolvedValueOnce('');
+    mockGlmChat.mockResolvedValueOnce(chatResult(''));
     const { glmChat } = await import('../clients/glm');
     const result = await glmChat([{ role: 'user', content: 'テスト' }]);
 
-    expect(result).toBe('');
+    expect(result.content).toBe('');
   });
 });
 
 // ---------- Gemini client tests ----------
 
 describe('geminiChat (mocked)', () => {
-  const mockGeminiChat = mock(() => Promise.resolve(''));
+  const mockGeminiChat = mock(() => Promise.resolve(chatResult('')));
 
   mock.module('../clients/gemini', () => ({
     geminiChat: mockGeminiChat,
@@ -61,14 +65,14 @@ describe('geminiChat (mocked)', () => {
 
   beforeEach(() => {
     mockGeminiChat.mockReset();
-    mockGeminiChat.mockResolvedValue('Geminiの応答');
+    mockGeminiChat.mockResolvedValue(chatResult('Geminiの応答'));
   });
 
   test('メッセージを送信して応答を取得できる', async () => {
     const { geminiChat } = await import('../clients/gemini');
     const result = await geminiChat([{ role: 'user', content: 'テストプロンプト' }]);
 
-    expect(result).toBe('Geminiの応答');
+    expect(result.content).toBe('Geminiの応答');
     expect(mockGeminiChat).toHaveBeenCalledTimes(1);
   });
 
@@ -81,10 +85,10 @@ describe('geminiChat (mocked)', () => {
   });
 
   test('空文字を返すケース', async () => {
-    mockGeminiChat.mockResolvedValueOnce('');
+    mockGeminiChat.mockResolvedValueOnce(chatResult(''));
     const { geminiChat } = await import('../clients/gemini');
     const result = await geminiChat([{ role: 'user', content: 'テスト' }]);
 
-    expect(result).toBe('');
+    expect(result.content).toBe('');
   });
 });

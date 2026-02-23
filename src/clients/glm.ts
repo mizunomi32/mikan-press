@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import 'dotenv/config';
-import type { ChatMessage } from '../types/index';
+import type { ChatMessage, ChatResult } from '../types/index';
 
 // GLM-5 is compatible with the OpenAI API format
 const client = new OpenAI({
@@ -14,12 +14,21 @@ const DEFAULT_GLM_MODEL = process.env.ZHIPU_MODEL ?? 'glm-5';
 export async function glmChat(
   messages: ChatMessage[],
   options: { model?: string; temperature?: number } = {}
-): Promise<string> {
+): Promise<ChatResult> {
   const response = await client.chat.completions.create({
     model: options.model ?? DEFAULT_GLM_MODEL,
     messages,
     temperature: options.temperature ?? 0.7,
   });
 
-  return response.choices[0]?.message?.content ?? '';
+  return {
+    content: response.choices[0]?.message?.content ?? '',
+    usage: response.usage
+      ? {
+          promptTokens: response.usage.prompt_tokens,
+          completionTokens: response.usage.completion_tokens,
+          totalTokens: response.usage.total_tokens,
+        }
+      : undefined,
+  };
 }

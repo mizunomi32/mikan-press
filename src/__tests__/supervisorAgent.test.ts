@@ -3,7 +3,11 @@ import type { ResearchResult, ArticlePlan, ReviewResult } from '../types/index';
 
 // ---------- mock chat() ----------
 
-const mockChat = mock(() => Promise.resolve(''));
+function chatResult(content: string) {
+  return { content, usage: undefined };
+}
+
+const mockChat = mock(() => Promise.resolve(chatResult('')));
 
 mock.module('../clients/chat', () => ({
   chat: mockChat,
@@ -58,16 +62,16 @@ function createMockReviewAgent(reviewSequence: ReviewResult[]): InstanceType<typ
 
 function setupFullPipelineMocks() {
   // ResearchAgent
-  mockChat.mockResolvedValueOnce(JSON.stringify(researchJson));
+  mockChat.mockResolvedValueOnce(chatResult(JSON.stringify(researchJson)));
   // PlanAgent
-  mockChat.mockResolvedValueOnce(JSON.stringify(planJson));
+  mockChat.mockResolvedValueOnce(chatResult(JSON.stringify(planJson)));
   // WriterAgent: intro + 1 section + conclusion = 3 calls
   mockChat
-    .mockResolvedValueOnce('導入文の内容')
-    .mockResolvedValueOnce('メインセクションの内容')
-    .mockResolvedValueOnce('まとめの内容');
+    .mockResolvedValueOnce(chatResult('導入文の内容'))
+    .mockResolvedValueOnce(chatResult('メインセクションの内容'))
+    .mockResolvedValueOnce(chatResult('まとめの内容'));
   // EditorAgent
-  mockChat.mockResolvedValueOnce('# テスト記事\n\n最終的な記事本文');
+  mockChat.mockResolvedValueOnce(chatResult('# テスト記事\n\n最終的な記事本文'));
 }
 
 // ---------- SupervisorAgent ----------
@@ -104,16 +108,16 @@ describe('SupervisorAgent', () => {
   test('revise → approve パターンでリトライが動作する', async () => {
     // Research: 1回目 + リトライ1回 = 2回
     mockChat
-      .mockResolvedValueOnce(JSON.stringify(researchJson))
-      .mockResolvedValueOnce(JSON.stringify(researchJson));
+      .mockResolvedValueOnce(chatResult(JSON.stringify(researchJson)))
+      .mockResolvedValueOnce(chatResult(JSON.stringify(researchJson)));
 
     // Plan, Writer, Editor は各1回
-    mockChat.mockResolvedValueOnce(JSON.stringify(planJson));
+    mockChat.mockResolvedValueOnce(chatResult(JSON.stringify(planJson)));
     mockChat
-      .mockResolvedValueOnce('導入文の内容')
-      .mockResolvedValueOnce('メインセクションの内容')
-      .mockResolvedValueOnce('まとめの内容');
-    mockChat.mockResolvedValueOnce('# テスト記事\n\n最終記事');
+      .mockResolvedValueOnce(chatResult('導入文の内容'))
+      .mockResolvedValueOnce(chatResult('メインセクションの内容'))
+      .mockResolvedValueOnce(chatResult('まとめの内容'));
+    mockChat.mockResolvedValueOnce(chatResult('# テスト記事\n\n最終記事'));
 
     // research: revise → approve, others: approve
     const mockReview = createMockReviewAgent([
@@ -137,17 +141,17 @@ describe('SupervisorAgent', () => {
   test('maxRetries 到達時は現在の結果で続行する', async () => {
     // Research: 3回実行（初回 + リトライ2回）
     mockChat
-      .mockResolvedValueOnce(JSON.stringify(researchJson))
-      .mockResolvedValueOnce(JSON.stringify(researchJson))
-      .mockResolvedValueOnce(JSON.stringify(researchJson));
+      .mockResolvedValueOnce(chatResult(JSON.stringify(researchJson)))
+      .mockResolvedValueOnce(chatResult(JSON.stringify(researchJson)))
+      .mockResolvedValueOnce(chatResult(JSON.stringify(researchJson)));
 
     // Plan, Writer, Editor
-    mockChat.mockResolvedValueOnce(JSON.stringify(planJson));
+    mockChat.mockResolvedValueOnce(chatResult(JSON.stringify(planJson)));
     mockChat
-      .mockResolvedValueOnce('導入文')
-      .mockResolvedValueOnce('本文')
-      .mockResolvedValueOnce('まとめ');
-    mockChat.mockResolvedValueOnce('最終記事');
+      .mockResolvedValueOnce(chatResult('導入文'))
+      .mockResolvedValueOnce(chatResult('本文'))
+      .mockResolvedValueOnce(chatResult('まとめ'));
+    mockChat.mockResolvedValueOnce(chatResult('最終記事'));
 
     // research: 3回とも revise, others: approve
     const mockReview = createMockReviewAgent([
@@ -197,14 +201,14 @@ describe('SupervisorAgent', () => {
     try {
       // ResearchAgent の chat() 呼び出しはスキップされる
       // PlanAgent
-      mockChat.mockResolvedValueOnce(JSON.stringify(planJson));
+      mockChat.mockResolvedValueOnce(chatResult(JSON.stringify(planJson)));
       // WriterAgent: intro + 1 section + conclusion = 3 calls
       mockChat
-        .mockResolvedValueOnce('導入文の内容')
-        .mockResolvedValueOnce('メインセクションの内容')
-        .mockResolvedValueOnce('まとめの内容');
+        .mockResolvedValueOnce(chatResult('導入文の内容'))
+        .mockResolvedValueOnce(chatResult('メインセクションの内容'))
+        .mockResolvedValueOnce(chatResult('まとめの内容'));
       // EditorAgent
-      mockChat.mockResolvedValueOnce('# テスト記事\n\nスキップ記事');
+      mockChat.mockResolvedValueOnce(chatResult('# テスト記事\n\nスキップ記事'));
 
       // research のレビューは不要なので 3 回（plan, write, edit）
       const mockReview = createMockReviewAgent([

@@ -21,7 +21,7 @@ export class PlanAgent {
     if (feedback) {
       prompt += `\n\n## 前回のレビューフィードバック\n以下の点を改善してください:\n${feedback}`;
     }
-    const raw = await chat(this.modelSpec, [{ role: 'user', content: prompt }]);
+    const { content: raw } = await chat(this.modelSpec, [{ role: 'user', content: prompt }]);
 
     const parsed = this.parseJson(raw, research.topic);
     logger.info(`[PlanAgent] 完了: "${parsed.title}"`);

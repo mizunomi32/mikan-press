@@ -18,7 +18,7 @@ export class ReviewAgent {
   async review(stage: WorkflowStage, content: string): Promise<ReviewResult> {
     logger.info(`[ReviewAgent] ${stage} ステージをレビュー中...`);
     const prompt = buildReviewPrompt(stage, content, this.language);
-    const raw = await chat(this.modelSpec, [{ role: 'user', content: prompt }], {
+    const { content: raw } = await chat(this.modelSpec, [{ role: 'user', content: prompt }], {
       temperature: 0.3,
     });
 
