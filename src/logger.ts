@@ -12,10 +12,8 @@ class Logger {
   private level: LogLevel;
 
   constructor() {
-    const env = (process.env["LOG_LEVEL"] ?? "info").toLowerCase();
-    this.level = LOG_LEVELS.includes(env as LogLevel)
-      ? (env as LogLevel)
-      : "info";
+    const env = (process.env.LOG_LEVEL ?? "info").toLowerCase();
+    this.level = LOG_LEVELS.includes(env as LogLevel) ? (env as LogLevel) : "info";
   }
 
   private shouldLog(level: LogLevel): boolean {

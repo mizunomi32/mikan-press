@@ -6,13 +6,13 @@
  * ノード生成を可能にします。
  */
 
-import { ChatPromptTemplate } from "@langchain/core/prompts";
 import type { AIMessage } from "@langchain/core/messages";
-import { createModel, type AgentRole } from "../config.js";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { type AgentRole, createModel } from "../config.js";
 import { logger } from "../logger.js";
 import { withSpinner } from "../spinner.js";
+import type { ArticleState } from "../state.js";
 import { logTokenUsage } from "../tokenUsage.js";
-import { ArticleState } from "../state.js";
 
 // ============================================================================
 // 型定義
@@ -42,7 +42,10 @@ export interface AgentConfig<TInput extends Record<string, unknown>, TRetryKey e
   /** ステートから入力値を抽出する関数 */
   inputExtractor: (state: typeof ArticleState.State) => TInput;
   /** AI応答からステート更新値を生成する関数 */
-  outputMapper: (content: string, state: typeof ArticleState.State) => Partial<typeof ArticleState.State>;
+  outputMapper: (
+    content: string,
+    state: typeof ArticleState.State,
+  ) => Partial<typeof ArticleState.State>;
   /** 次のステータス（PROCEED時） */
   nextStatus: string;
   /** リトライカウントのキー名 */
@@ -120,13 +123,11 @@ export async function executeAgentChain<T extends Record<string, unknown>>(
   agentName: string,
   modelType: AgentRole,
   prompt: ChatPromptTemplate,
-  input: T
+  input: T,
 ): Promise<AIMessage> {
   const model = createModel(modelType);
   const chain = prompt.pipe(model);
-  const result = await withSpinner(`[${agentName}] 思考中...`, () =>
-    chain.invoke(input)
-  );
+  const result = await withSpinner(`[${agentName}] 思考中...`, () => chain.invoke(input));
   logTokenUsage(agentName, result as unknown);
   return result as AIMessage;
 }
@@ -144,8 +145,11 @@ export async function executeAgentChain<T extends Record<string, unknown>>(
  * @param config - エージェント設定オブジェクト
  * @returns LangGraphノード関数
  */
-export function createStandardAgent<TInput extends Record<string, unknown>, TRetryKey extends RetryKey>(
-  config: AgentConfig<TInput, TRetryKey>
+export function createStandardAgent<
+  TInput extends Record<string, unknown>,
+  TRetryKey extends RetryKey,
+>(
+  config: AgentConfig<TInput, TRetryKey>,
 ): (state: typeof ArticleState.State) => Promise<Partial<typeof ArticleState.State>> {
   const {
     name,
@@ -176,9 +180,7 @@ export function createStandardAgent<TInput extends Record<string, unknown>, TRet
     ["human", humanPromptTemplate],
   ]);
 
-  return async (
-    state: typeof ArticleState.State
-  ): Promise<Partial<typeof ArticleState.State>> => {
+  return async (state: typeof ArticleState.State): Promise<Partial<typeof ArticleState.State>> => {
     // スキップ条件チェック
     if (skipCondition && skipResponse && skipCondition(state)) {
       logger.info(`[${name}] 処理をスキップします`);
@@ -186,7 +188,7 @@ export function createStandardAgent<TInput extends Record<string, unknown>, TRet
     }
 
     // 改稿モード判定
-    const isRevision = revisionConfig && revisionConfig.condition(state);
+    const isRevision = revisionConfig?.condition(state);
 
     // 現在の試行回数
     const currentCount = (state[retryKey] ?? 0) as number;
@@ -194,7 +196,7 @@ export function createStandardAgent<TInput extends Record<string, unknown>, TRet
 
     // 入力値の抽出
     const input = isRevision
-      ? (revisionConfig!.inputExtractor(state) as TInput)
+      ? (revisionConfig?.inputExtractor(state) as TInput)
       : inputExtractor(state);
 
     // デバッグログ（各エージェント固有の値）
@@ -202,18 +204,16 @@ export function createStandardAgent<TInput extends Record<string, unknown>, TRet
 
     // 開始ログ
     logger.info(
-      `[${name}] 処理を開始します...（${attempt}回目${attempt > 1 ? "・自己ループ" : ""}）`
+      `[${name}] 処理を開始します...（${attempt}回目${attempt > 1 ? "・自己ループ" : ""}）`,
     );
 
     // モデル実行
-    const prompt = isRevision ? revisionPrompt! : initialPrompt;
+    const prompt = isRevision && revisionPrompt ? revisionPrompt : initialPrompt;
     const result = await executeAgentChain(name, modelType, prompt, input);
 
     // レスポンス解析
     const raw =
-      typeof result.content === "string"
-        ? result.content
-        : JSON.stringify(result.content);
+      typeof result.content === "string" ? result.content : JSON.stringify(result.content);
     const { needRetry, content } = parseRetryResponse(raw);
 
     // デバッグログ（応答内容）
@@ -227,15 +227,11 @@ export function createStandardAgent<TInput extends Record<string, unknown>, TRet
     const nextAction = needRetry
       ? ` → 再実行します（次は${nextCount + 1}回目）`
       : ` → ${nextStatus} へ`;
-    logger.info(
-      `[${name}] 自己ループ判定: ${retryOrProceed}（${attempt}回目実施）${nextAction}`
-    );
+    logger.info(`[${name}] 自己ループ判定: ${retryOrProceed}（${attempt}回目実施）${nextAction}`);
 
     // 完了ログ（PROCEED時のみ）
     if (!needRetry) {
-      const message = isRevision
-        ? revisionConfig!.completionMessage
-        : completionMessage;
+      const message = isRevision ? revisionConfig?.completionMessage : completionMessage;
       logger.info(`[${name}] ${message}`);
     }
 
@@ -259,48 +255,30 @@ export function createStandardAgent<TInput extends Record<string, unknown>, TRet
  * @returns LangGraphノード関数
  */
 export function createReviewerAgent(
-  config: ReviewerAgentConfig
+  config: ReviewerAgentConfig,
 ): (state: typeof ArticleState.State) => Promise<Partial<typeof ArticleState.State>> {
-  const {
-    name,
-    modelType,
-    systemPrompt,
-    humanPromptTemplate,
-    inputExtractor,
-  } = config;
+  const { name, modelType, systemPrompt, humanPromptTemplate, inputExtractor } = config;
 
   const prompt = ChatPromptTemplate.fromMessages([
     ["system", systemPrompt],
     ["human", humanPromptTemplate],
   ]);
 
-  return async (
-    state: typeof ArticleState.State
-  ): Promise<Partial<typeof ArticleState.State>> => {
+  return async (state: typeof ArticleState.State): Promise<Partial<typeof ArticleState.State>> => {
     const currentCount = state.reviewCount ?? 0;
     const maxReviews = state.maxReviews ?? 3;
 
     logger.info(`[${name}] レビューを実施します（${currentCount + 1}回目）...`);
 
     // デバッグログ
-    logger.debug(
-      `[${name}] 編集済み原稿:`,
-      state.editedDraft.slice(0, 200)
-    );
+    logger.debug(`[${name}] 編集済み原稿:`, state.editedDraft.slice(0, 200));
 
     // モデル実行
-    const result = await executeAgentChain(
-      name,
-      modelType,
-      prompt,
-      inputExtractor(state)
-    );
+    const result = await executeAgentChain(name, modelType, prompt, inputExtractor(state));
 
     // レスポンス抽出
     const reviewText =
-      typeof result.content === "string"
-        ? result.content
-        : JSON.stringify(result.content);
+      typeof result.content === "string" ? result.content : JSON.stringify(result.content);
 
     logger.debug(`[${name}] 応答:`, reviewText.slice(0, 200));
 
@@ -312,7 +290,7 @@ export function createReviewerAgent(
       logger.info(`[${name}] 記事を承認しました`);
     } else if (reachedLimit) {
       logger.info(
-        `[${name}] 差し戻し判定ですが、最大レビュー回数（${maxReviews}回）に達したため終了します`
+        `[${name}] 差し戻し判定ですが、最大レビュー回数（${maxReviews}回）に達したため終了します`,
       );
     } else {
       logger.info(`[${name}] 差し戻しします`);

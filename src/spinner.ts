@@ -23,10 +23,7 @@ export function stopSpinner(clearLine = true): void {
   }
 }
 
-export function withSpinner<T>(
-  label: string,
-  fn: () => Promise<T>
-): Promise<T> {
+export function withSpinner<T>(label: string, fn: () => Promise<T>): Promise<T> {
   startSpinner(label);
   return fn().finally(() => stopSpinner());
 }

@@ -11,14 +11,7 @@ export const ArticleState = Annotation.Root({
   reviewCount: Annotation<number>,
   maxReviews: Annotation<number>,
   skipResearch: Annotation<boolean>,
-  status: Annotation<
-    | "researching"
-    | "planning"
-    | "writing"
-    | "editing"
-    | "reviewing"
-    | "done"
-  >,
+  status: Annotation<"researching" | "planning" | "writing" | "editing" | "reviewing" | "done">,
   // 各エージェントの自己ループ用
   needRetry: Annotation<boolean>,
   maxRetriesPerAgent: Annotation<number>,

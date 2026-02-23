@@ -14,7 +14,10 @@ function getUsage(result: {
   response_metadata?: Record<string, unknown>;
 }): { input: number; output: number; total: number } | null {
   const r = result.response_metadata as
-    | { usage?: UsageLike; tokenUsage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number } }
+    | {
+        usage?: UsageLike;
+        tokenUsage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number };
+      }
     | undefined;
   const tu = r?.tokenUsage;
   const u = result.usage_metadata ?? r?.usage;
@@ -41,11 +44,11 @@ function getUsage(result: {
 
 export function logTokenUsage(label: string, result: unknown): void {
   const usage = getUsage(
-    result as { usage_metadata?: UsageLike; response_metadata?: Record<string, unknown> }
+    result as { usage_metadata?: UsageLike; response_metadata?: Record<string, unknown> },
   );
   if (usage) {
     logger.info(
-      `[${label}] トークン: 入力=${usage.input} 出力=${usage.output} 合計=${usage.total}`
+      `[${label}] トークン: 入力=${usage.input} 出力=${usage.output} 合計=${usage.total}`,
     );
   }
 }

@@ -1,9 +1,5 @@
-import {
-  createReviewerAgent,
-  type ReviewerAgentConfig,
-} from "./agentFactory.js";
-import { REVIEWER_SYSTEM, REVIEWER_HUMAN } from "../prompts/reviewer.js";
-import { ArticleState } from "../state.js";
+import { REVIEWER_HUMAN, REVIEWER_SYSTEM } from "../prompts/reviewer.js";
+import { createReviewerAgent, type ReviewerAgentConfig } from "./agentFactory.js";
 
 const config: ReviewerAgentConfig = {
   name: "Reviewer",

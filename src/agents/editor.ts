@@ -1,9 +1,5 @@
-import {
-  createStandardAgent,
-  type AgentConfig,
-} from "./agentFactory.js";
-import { EDITOR_SYSTEM, EDITOR_HUMAN } from "../prompts/editor.js";
-import { ArticleState } from "../state.js";
+import { EDITOR_HUMAN, EDITOR_SYSTEM } from "../prompts/editor.js";
+import { type AgentConfig, createStandardAgent } from "./agentFactory.js";
 
 type EditorInput = { draft: string };
 

@@ -1,9 +1,5 @@
-import {
-  createStandardAgent,
-  type AgentConfig,
-} from "./agentFactory.js";
-import { PLANNER_SYSTEM, PLANNER_HUMAN } from "../prompts/planner.js";
-import { ArticleState } from "../state.js";
+import { PLANNER_HUMAN, PLANNER_SYSTEM } from "../prompts/planner.js";
+import { type AgentConfig, createStandardAgent } from "./agentFactory.js";
 
 type PlannerInput = { topic: string; research: string };
 
