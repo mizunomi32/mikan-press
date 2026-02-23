@@ -1,7 +1,16 @@
+import "dotenv/config";
 import { writeFileSync } from "node:fs";
 import { Command } from "commander";
+import { validateEnv } from "@/env.js";
 import { buildGraph } from "@/graph.js";
 import { logger } from "@/logger.js";
+
+// 起動時に環境変数をバリデーション
+try {
+  validateEnv();
+} catch {
+  process.exit(1);
+}
 
 const program = new Command();
 

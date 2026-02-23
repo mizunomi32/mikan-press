@@ -1,4 +1,5 @@
 import type { AgentError } from "@/errors/index.js";
+import { getEnv } from "@/env.js";
 
 const LOG_LEVELS = ["error", "warn", "info", "debug"] as const;
 type LogLevel = (typeof LOG_LEVELS)[number];
@@ -39,8 +40,8 @@ export class Logger {
   private level: LogLevel;
 
   constructor() {
-    const env = (process.env.LOG_LEVEL ?? "info").toLowerCase();
-    this.level = LOG_LEVELS.includes(env as LogLevel) ? (env as LogLevel) : "info";
+    const env = getEnv();
+    this.level = env.LOG_LEVEL;
   }
 
   private shouldLog(level: LogLevel): boolean {
@@ -102,4 +103,14 @@ export class Logger {
   }
 }
 
-export const logger = new Logger();
+// 遅延初期化: 最初にアクセスされた時にのみ初期化
+let _logger: Logger | null = null;
+
+export const logger: Logger = new Proxy({} as Logger, {
+  get(_target, prop: keyof Logger) {
+    if (!_logger) {
+      _logger = new Logger();
+    }
+    return _logger[prop];
+  },
+});
