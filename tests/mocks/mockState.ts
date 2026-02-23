@@ -7,6 +7,28 @@
 import type { ArticleState } from "../../src/state.js";
 
 /**
+ * 基本的な初期TODOリスト
+ */
+const initialTodos = [
+  { id: "researcher", name: "リサーチ", status: "pending" as const, attemptCount: 0 },
+  { id: "planner", name: "構成策划", status: "pending" as const, attemptCount: 0 },
+  { id: "writer", name: "執筆", status: "pending" as const, attemptCount: 0 },
+  { id: "editor", name: "編集", status: "pending" as const, attemptCount: 0 },
+  { id: "reviewer", name: "レビュー", status: "pending" as const, attemptCount: 0 },
+];
+
+/**
+ * リサーチスキップ時のTODOリスト
+ */
+const skipResearchTodos = [
+  { id: "researcher", name: "リサーチ", status: "skipped" as const, attemptCount: 0 },
+  { id: "planner", name: "構成策划", status: "pending" as const, attemptCount: 0 },
+  { id: "writer", name: "執筆", status: "pending" as const, attemptCount: 0 },
+  { id: "editor", name: "編集", status: "pending" as const, attemptCount: 0 },
+  { id: "reviewer", name: "レビュー", status: "pending" as const, attemptCount: 0 },
+];
+
+/**
  * 基本的な初期状態（トピックのみ）
  */
 export const initialFixture: Partial<ArticleState> = {
@@ -27,6 +49,8 @@ export const initialFixture: Partial<ArticleState> = {
   plannerRetryCount: 0,
   writerRetryCount: 0,
   editorRetryCount: 0,
+  todos: initialTodos,
+  currentTodoId: null,
 };
 
 /**
@@ -71,6 +95,7 @@ export const editedFixture: Partial<ArticleState> = {
 export const skipResearchFixture: Partial<ArticleState> = {
   ...initialFixture,
   skipResearch: true,
+  todos: skipResearchTodos,
 };
 
 /**

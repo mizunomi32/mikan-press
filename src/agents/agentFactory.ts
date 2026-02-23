@@ -15,6 +15,8 @@ import { withSpinner } from "@/spinner.js";
 import type { ArticleState } from "@/state.js";
 import { logTokenUsage } from "@/tokenUsage.js";
 import { validatePromptInput } from "@/types/prompts.js";
+import { withModelRetry } from "@/utils/retry.js";
+import { createInitialTodos, logProgress, updateTodoStatus } from "@/utils/todoManager.js";
 
 // ============================================================================
 // 型定義
@@ -198,11 +200,23 @@ export function createStandardAgent<
   ]);
 
   return async (state: typeof ArticleState.State): Promise<Partial<typeof ArticleState.State>> => {
+    const taskId = name.toLowerCase();
+    const currentTodos = state.todos ?? createInitialTodos(state.skipResearch);
+
     // スキップ条件チェック
     if (skipCondition && skipResponse && skipCondition(state)) {
       logger.info(`[${name}] 処理をスキップします`);
-      return skipResponse;
+      const skippedTodos = updateTodoStatus(currentTodos, taskId, "skipped");
+      return {
+        ...skipResponse,
+        todos: skippedTodos,
+        currentTodoId: null,
+      };
     }
+
+    // TODO状態をin_progressに更新
+    const updatedTodos = updateTodoStatus(currentTodos, taskId, "in_progress");
+    logProgress(updatedTodos, `${name}を開始します`);
 
     // 改稿モード判定
     const isRevision = revisionConfig?.condition(state);
@@ -255,6 +269,11 @@ export function createStandardAgent<
       : ` → ${nextStatus} へ`;
     logger.info(`[${name}] 自己ループ判定: ${retryOrProceed}（${attempt}回目実施）${nextAction}`);
 
+    // TODO状態の最終更新（RETRY時はin_progressのまま、PROCEED時はcompleted）
+    const finalTodos = needRetry
+      ? updatedTodos
+      : updateTodoStatus(updatedTodos, taskId, "completed");
+
     // 完了ログ（PROCEED時のみ）
     if (!needRetry) {
       const message = isRevision ? revisionConfig?.completionMessage : completionMessage;
@@ -267,6 +286,8 @@ export function createStandardAgent<
       status: nextStatus as typeof ArticleState.State.status,
       needRetry,
       [retryKey]: nextCount,
+      todos: finalTodos,
+      currentTodoId: needRetry ? taskId : null,
     };
   };
 }
@@ -292,6 +313,13 @@ export function createReviewerAgent<TInputSchema extends z.ZodType>(
   ]);
 
   return async (state: typeof ArticleState.State): Promise<Partial<typeof ArticleState.State>> => {
+    const taskId = name.toLowerCase();
+    const currentTodos = state.todos ?? createInitialTodos(state.skipResearch);
+
+    // TODO状態をin_progressに更新
+    const updatedTodos = updateTodoStatus(currentTodos, taskId, "in_progress");
+    logProgress(updatedTodos, `${name}を開始します`);
+
     const currentCount = state.reviewCount ?? 0;
     const maxReviews = state.maxReviews ?? 3;
 
@@ -334,11 +362,194 @@ export function createReviewerAgent<TInputSchema extends z.ZodType>(
 
     const isDone = isApproved || reachedLimit;
 
+    // Reviewerは常にcompleted（差し戻し時も自身のタスクは完了）
+    const finalTodos = updateTodoStatus(updatedTodos, taskId, "completed");
+
     return {
       review: reviewText,
       reviewCount: currentCount + 1,
       finalArticle: isDone ? state.editedDraft : undefined,
       status: (isDone ? "done" : "writing") as typeof ArticleState.State.status,
+      todos: finalTodos,
+      currentTodoId: null,
+    };
+  };
+}
+
+/**
+ * ツール対応エージェントノードを生成
+ *
+ * 標準エージェントと同様の処理に加え、LangChainツールをモデルにバインドします。
+ * ツールを使用するエージェント（Researcher等）で使用します。
+ *
+ * @param config - ツール対応エージェント設定オブジェクト
+ * @returns LangGraphノード関数
+ */
+export function createToolEnabledAgent<
+  TInput extends Record<string, unknown>,
+  TRetryKey extends RetryKey,
+  TInputSchema extends z.ZodType,
+>(
+  config: ToolEnabledAgentConfig<TInput, TRetryKey, TInputSchema>,
+): (state: typeof ArticleState.State) => Promise<Partial<typeof ArticleState.State>> {
+  const {
+    name,
+    modelType,
+    systemPrompt,
+    humanPromptTemplate,
+    inputSchema,
+    inputExtractor,
+    outputMapper,
+    nextStatus,
+    retryKey,
+    completionMessage,
+    skipCondition,
+    skipResponse,
+    revisionConfig,
+    tools = [],
+  } = config;
+
+  // 改稿用プロンプトの事前構築（設定がある場合）
+  const revisionPrompt = revisionConfig
+    ? ChatPromptTemplate.fromMessages([
+        ["system", systemPrompt],
+        ["human", revisionConfig.humanPromptTemplate],
+      ])
+    : null;
+
+  // 初回用プロンプト
+  const initialPrompt = ChatPromptTemplate.fromMessages([
+    ["system", systemPrompt],
+    ["human", humanPromptTemplate],
+  ]);
+
+  return async (state: typeof ArticleState.State): Promise<Partial<typeof ArticleState.State>> => {
+    const taskId = name.toLowerCase();
+    const currentTodos = state.todos ?? createInitialTodos(state.skipResearch);
+
+    // スキップ条件チェック
+    if (skipCondition && skipResponse && skipCondition(state)) {
+      logger.info(`[${name}] 処理をスキップします`);
+      const skippedTodos = updateTodoStatus(currentTodos, taskId, "skipped");
+      return {
+        ...skipResponse,
+        todos: skippedTodos,
+        currentTodoId: null,
+      };
+    }
+
+    // TODO状態をin_progressに更新
+    const updatedTodos = updateTodoStatus(currentTodos, taskId, "in_progress");
+    logProgress(updatedTodos, `${name}を開始します`);
+
+    // 改稿モード判定
+    const isRevision = revisionConfig?.condition(state);
+
+    // 現在の試行回数
+    const currentCount = (state[retryKey] ?? 0) as number;
+    const attempt = currentCount + 1;
+
+    // 入力値の抽出
+    const extractedInput = isRevision
+      ? (revisionConfig?.inputExtractor(state) as TInput)
+      : inputExtractor(state);
+
+    // 入力バリデーション（改稿時は revisionConfig.inputSchema、初回は inputSchema）
+    const schema = isRevision && revisionConfig ? revisionConfig.inputSchema : inputSchema;
+    const input = validatePromptInput(schema, extractedInput as Record<string, unknown>, name);
+
+    // デバッグログ（各エージェント固有の値）
+    logger.debug(`[${name}] 入力:`, JSON.stringify(input).slice(0, 200));
+
+    // ツール使用ログ
+    if (tools.length > 0) {
+      logger.debug(`[${name}] 利用可能なツール: ${tools.map((t) => t.name).join(", ")}`);
+    }
+
+    // 開始ログ
+    logger.info(
+      `[${name}] 処理を開始します...（${attempt}回目${attempt > 1 ? "・自己ループ" : ""}）`,
+    );
+
+    // モデル実行（ツール対応・ツール実行ループ付き）
+    const prompt = isRevision && revisionPrompt ? revisionPrompt : initialPrompt;
+    const { result, toolCallsUsed } = await executeToolEnabledAgentChain(
+      name,
+      modelType,
+      prompt,
+      input as Record<string, unknown>,
+      tools,
+    );
+
+    // レスポンス解析
+    let content: string;
+    if (typeof result.content === "string") {
+      content = result.content;
+    } else if (Array.isArray(result.content)) {
+      content = result.content
+        .map((item) => {
+          if (typeof item === "string") return item;
+          if ("text" in item && typeof item.text === "string") return item.text;
+          return "";
+        })
+        .filter(Boolean)
+        .join("\n");
+    } else {
+      content = JSON.stringify(result.content);
+    }
+
+    // ツール使用状況のログ
+    if (tools.length > 0 && !toolCallsUsed) {
+      logger.warn(
+        `[${name}] ツールが指定されていますが、モデルはツールを呼び出しませんでした。`,
+      );
+    }
+
+    // Researcherエージェント特別処理: ツールが使われず出力が短すぎる場合はRETRY
+    let forceRetry = false;
+    if (name === "Researcher" && !toolCallsUsed && tools.length > 0 && content.length < 300) {
+      logger.warn(
+        `[${name}] 出力が短すぎます（${content.length}文字）。ツール対応モデルの使用を推奨します。`,
+      );
+      forceRetry = true;
+    }
+
+    const { needRetry: parsedNeedRetry } = parseRetryResponse(content);
+    // 強制RETRYが有効な場合、またはパース結果がRETRYの場合
+    const needRetry = forceRetry || parsedNeedRetry;
+
+    // デバッグログ（応答内容）
+    logger.debug(`[${name}] 応答:`, content.slice(0, 200));
+
+    // リトライカウント更新
+    const nextCount = needRetry ? currentCount + 1 : currentCount;
+
+    // 自己ループ判定ログ
+    const retryOrProceed = needRetry ? "RETRY" : "PROCEED";
+    const nextAction = needRetry
+      ? ` → 再実行します（次は${nextCount + 1}回目）`
+      : ` → ${nextStatus} へ`;
+    logger.info(`[${name}] 自己ループ判定: ${retryOrProceed}（${attempt}回目実施）${nextAction}`);
+
+    // TODO状態の最終更新（RETRY時はin_progressのまま、PROCEED時はcompleted）
+    const finalTodos = needRetry
+      ? updatedTodos
+      : updateTodoStatus(updatedTodos, taskId, "completed");
+
+    // 完了ログ（PROCEED時のみ）
+    if (!needRetry) {
+      const message = isRevision ? revisionConfig?.completionMessage : completionMessage;
+      logger.info(`[${name}] ${message}`);
+    }
+
+    // ステート更新値の構築
+    return {
+      ...outputMapper(content, state),
+      status: nextStatus as typeof ArticleState.State.status,
+      needRetry,
+      [retryKey]: nextCount,
+      todos: finalTodos,
+      currentTodoId: needRetry ? taskId : null,
     };
   };
 }

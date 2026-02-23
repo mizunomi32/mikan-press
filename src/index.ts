@@ -2,6 +2,7 @@ import { writeFileSync } from "node:fs";
 import { Command } from "commander";
 import { buildGraph } from "@/graph.js";
 import { logger } from "@/logger.js";
+import { createInitialTodos } from "@/utils/todoManager.js";
 
 const program = new Command();
 
@@ -55,6 +56,8 @@ program
         plannerRetryCount: 0,
         writerRetryCount: 0,
         editorRetryCount: 0,
+        todos: createInitialTodos(!!skipResearch),
+        currentTodoId: null,
       });
 
       logger.info("\n✅ 記事生成が完了しました\n");
