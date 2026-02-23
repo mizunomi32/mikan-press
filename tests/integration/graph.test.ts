@@ -8,7 +8,7 @@ import { describe, expect, test } from "bun:test";
 import { buildGraph } from "../../src/graph.js";
 
 // ルーター関数をテストするためのヘルパー
-function createTestState(overrides: Record<string, unknown> = {}) {
+function _createTestState(overrides: Record<string, unknown> = {}) {
   return {
     maxRetriesPerAgent: 1,
     researcherRetryCount: 0,

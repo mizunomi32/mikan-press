@@ -1,8 +1,14 @@
-import { type AgentConfig, createStandardAgent } from "@/agents/agentFactory.js";
+import type { Tool } from "@langchain/core/tools";
+import { createToolEnabledAgent, type ToolEnabledAgentConfig } from "@/agents/agentFactory.js";
 import { RESEARCHER_HUMAN, RESEARCHER_SYSTEM } from "@/prompts/researcher.js";
+import { webSearchTool } from "@/tools/search.js";
 import { type ResearcherInput, researcherInputSchema } from "@/types/prompts.js";
 
-const config: AgentConfig<ResearcherInput, "researcherRetryCount", typeof researcherInputSchema> = {
+const config: ToolEnabledAgentConfig<
+  ResearcherInput,
+  "researcherRetryCount",
+  typeof researcherInputSchema
+> = {
   name: "Researcher",
   modelType: "researcher",
   systemPrompt: RESEARCHER_SYSTEM,
@@ -18,6 +24,7 @@ const config: AgentConfig<ResearcherInput, "researcherRetryCount", typeof resear
     research: "（リサーチスキップ）",
     status: "planning",
   },
+  tools: [webSearchTool as unknown as Tool],
 };
 
-export const researcherNode = createStandardAgent(config);
+export const researcherNode = createToolEnabledAgent(config);

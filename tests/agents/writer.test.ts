@@ -5,7 +5,6 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { writerNode } from "../../src/agents/writer.js";
 import { editedFixture, outlinedFixture } from "../mocks/mockState.js";
 
 describe("writerNode", () => {

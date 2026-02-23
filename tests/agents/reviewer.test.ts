@@ -6,7 +6,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { reviewerNode } from "../../src/agents/reviewer.js";
-import { editedFixture, reviewApprovedFixture, reviewReviseFixture } from "../mocks/mockState.js";
+import { editedFixture } from "../mocks/mockState.js";
 
 describe("reviewerNode", () => {
   describe("入力抽出", () => {
@@ -76,8 +76,8 @@ describe("reviewerNode", () => {
     });
 
     test("承認時は回数に関わらず終了", () => {
-      const currentCount = 1;
-      const maxReviews = 3;
+      const _currentCount = 1;
+      const _maxReviews = 3;
       const isApproved = true;
 
       const isDone = isApproved;

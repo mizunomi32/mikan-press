@@ -54,7 +54,10 @@ export class MockChatModel extends BaseChatModel {
       throw new Error("No more responses in queue. Did you forget to add enough responses?");
     }
 
-    const responseText = this.responsesQueue.shift()!;
+    const responseText = this.responsesQueue.shift();
+    if (responseText === undefined) {
+      throw new Error("No response available in queue");
+    }
     const usage = this.usageQueue.shift();
 
     const message: AIMessage = {
