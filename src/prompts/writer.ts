@@ -8,7 +8,9 @@ export const WRITER_SYSTEM = `あなたは優秀なライターです。
 - マークダウン形式で出力する
 - 各セクションに十分な分量を確保する
 
-最後に、結果に自信がある場合は PROCEED、やり直したい場合は RETRY のいずれか1行で出力してください。`;
+【重要】出力の最後の行は、必ず PROCEED または RETRY のいずれか1語のみで終えること。
+- 表現が不十分・構成を変えたい・書き直したい場合は RETRY
+- この内容でよいと判断した場合のみ PROCEED`;
 
 export const WRITER_HUMAN = `以下の情報をもとに記事を執筆してください。
 
@@ -19,7 +21,9 @@ export const WRITER_HUMAN = `以下の情報をもとに記事を執筆してく
 {research}
 
 ## アウトライン
-{outline}`;
+{outline}
+
+※ 回答の最後の行は、PROCEED または RETRY のいずれか1語で終えてください。`;
 
 export const WRITER_REVISION_HUMAN = `以下のレビューフィードバックを踏まえて、記事を改善してください。
 
@@ -36,4 +40,6 @@ export const WRITER_REVISION_HUMAN = `以下のレビューフィードバック
 {draft}
 
 ## レビューフィードバック
-{review}`;
+{review}
+
+※ 回答の最後の行は、PROCEED または RETRY のいずれか1語で終えてください。`;

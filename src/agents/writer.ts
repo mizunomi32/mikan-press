@@ -1,6 +1,8 @@
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { createModel } from "../config.js";
 import { logger } from "../logger.js";
+import { withSpinner } from "../spinner.js";
+import { logTokenUsage } from "../tokenUsage.js";
 import {
   WRITER_SYSTEM,
   WRITER_HUMAN,
@@ -32,20 +34,24 @@ export async function writerNode(
     );
     logger.debug("[Writer] レビュー内容:", state.review.slice(0, 200));
     const chain = revisionPrompt.pipe(model);
-    const result = await chain.invoke({
-      topic: state.topic,
-      research: state.research,
-      outline: state.outline,
-      draft: state.editedDraft || state.draft,
-      review: state.review,
-    });
+    const result = await withSpinner("[Writer] 思考中...", () =>
+      chain.invoke({
+        topic: state.topic,
+        research: state.research,
+        outline: state.outline,
+        draft: state.editedDraft || state.draft,
+        review: state.review,
+      })
+    );
+    logTokenUsage("Writer", result as unknown);
 
     const raw =
       typeof result.content === "string"
         ? result.content
         : JSON.stringify(result.content);
-    const needRetry = raw.includes("RETRY");
-    const content = raw.replace(/\n*(PROCEED|RETRY)\s*$/i, "").trim();
+    const trimmed = raw.trim();
+    const needRetry = /\bretry\s*$/im.test(trimmed);
+    const content = trimmed.replace(/\n*(PROCEED|RETRY)\s*$/i, "").trim();
     logger.debug("[Writer] 応答:", content.slice(0, 200));
     const nextCount = needRetry ? (state.writerRetryCount ?? 0) + 1 : (state.writerRetryCount ?? 0);
     logger.info(
@@ -65,18 +71,22 @@ export async function writerNode(
   );
   logger.debug("[Writer] アウトライン:", state.outline.slice(0, 200));
   const chain = initialPrompt.pipe(model);
-  const result = await chain.invoke({
-    topic: state.topic,
-    research: state.research,
-    outline: state.outline,
-  });
+  const result = await withSpinner("[Writer] 思考中...", () =>
+    chain.invoke({
+      topic: state.topic,
+      research: state.research,
+      outline: state.outline,
+    })
+  );
+  logTokenUsage("Writer", result as unknown);
 
   const raw =
     typeof result.content === "string"
       ? result.content
       : JSON.stringify(result.content);
-  const needRetry = raw.includes("RETRY");
-  const content = raw.replace(/\n*(PROCEED|RETRY)\s*$/i, "").trim();
+  const trimmed = raw.trim();
+  const needRetry = /\bretry\s*$/im.test(trimmed);
+  const content = trimmed.replace(/\n*(PROCEED|RETRY)\s*$/i, "").trim();
   logger.debug("[Writer] 応答:", content.slice(0, 200));
   const nextCount = needRetry ? (state.writerRetryCount ?? 0) + 1 : (state.writerRetryCount ?? 0);
   logger.info(

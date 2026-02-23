@@ -1,6 +1,8 @@
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { createModel } from "../config.js";
 import { logger } from "../logger.js";
+import { withSpinner } from "../spinner.js";
+import { logTokenUsage } from "../tokenUsage.js";
 import { EDITOR_SYSTEM, EDITOR_HUMAN } from "../prompts/editor.js";
 import type { ArticleState } from "../state.js";
 
@@ -19,14 +21,18 @@ export async function editorNode(
   logger.debug("[Editor] 原稿:", state.draft.slice(0, 200));
   const model = createModel("editor");
   const chain = prompt.pipe(model);
-  const result = await chain.invoke({ draft: state.draft });
+  const result = await withSpinner("[Editor] 思考中...", () =>
+    chain.invoke({ draft: state.draft })
+  );
+  logTokenUsage("Editor", result as unknown);
 
   const raw =
     typeof result.content === "string"
       ? result.content
       : JSON.stringify(result.content);
-  const needRetry = raw.includes("RETRY");
-  const content = raw.replace(/\n*(PROCEED|RETRY)\s*$/i, "").trim();
+  const trimmed = raw.trim();
+  const needRetry = /\bretry\s*$/im.test(trimmed);
+  const content = trimmed.replace(/\n*(PROCEED|RETRY)\s*$/i, "").trim();
   logger.debug("[Editor] 応答:", content.slice(0, 200));
   const nextCount = needRetry ? (state.editorRetryCount ?? 0) + 1 : (state.editorRetryCount ?? 0);
   logger.info(

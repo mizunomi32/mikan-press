@@ -8,12 +8,13 @@ import { reviewerNode } from "./agents/reviewer.js";
 
 const max = (state: typeof ArticleState.State) => state.maxRetriesPerAgent ?? 1;
 
+// maxRetriesPerAgent = 許容するやり直し回数（1 → 最大2回実行）
 function researcherRouter(
   state: typeof ArticleState.State
 ): "researcher" | "planner" {
   const retry =
     state.needRetry &&
-    (state.researcherRetryCount ?? 0) < max(state);
+    (state.researcherRetryCount ?? 0) <= max(state);
   return retry ? "researcher" : "planner";
 }
 
@@ -22,7 +23,7 @@ function plannerRouter(
 ): "planner" | "writer" {
   const retry =
     state.needRetry &&
-    (state.plannerRetryCount ?? 0) < max(state);
+    (state.plannerRetryCount ?? 0) <= max(state);
   return retry ? "planner" : "writer";
 }
 
@@ -31,7 +32,7 @@ function writerRouter(
 ): "writer" | "editor" {
   const retry =
     state.needRetry &&
-    (state.writerRetryCount ?? 0) < max(state);
+    (state.writerRetryCount ?? 0) <= max(state);
   return retry ? "writer" : "editor";
 }
 
@@ -40,7 +41,7 @@ function editorRouter(
 ): "editor" | "reviewer" {
   const retry =
     state.needRetry &&
-    (state.editorRetryCount ?? 0) < max(state);
+    (state.editorRetryCount ?? 0) <= max(state);
   return retry ? "editor" : "reviewer";
 }
 

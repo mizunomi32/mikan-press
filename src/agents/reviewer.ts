@@ -1,6 +1,8 @@
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { createModel } from "../config.js";
 import { logger } from "../logger.js";
+import { withSpinner } from "../spinner.js";
+import { logTokenUsage } from "../tokenUsage.js";
 import { REVIEWER_SYSTEM, REVIEWER_HUMAN } from "../prompts/reviewer.js";
 import type { ArticleState } from "../state.js";
 
@@ -20,10 +22,13 @@ export async function reviewerNode(
 
   const model = createModel("reviewer");
   const chain = prompt.pipe(model);
-  const result = await chain.invoke({
-    outline: state.outline,
-    editedDraft: state.editedDraft,
-  });
+  const result = await withSpinner("[Reviewer] 思考中...", () =>
+    chain.invoke({
+      outline: state.outline,
+      editedDraft: state.editedDraft,
+    })
+  );
+  logTokenUsage("Reviewer", result as unknown);
 
   const reviewText =
     typeof result.content === "string"
