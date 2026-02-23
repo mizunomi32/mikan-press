@@ -75,3 +75,4 @@ bun dev --topic "トピック名"  # 開発モードで記事生成
 - `ARTICLE_LANGUAGE` — 出力言語
 - `MAX_ARTICLE_LENGTH` — 最大文字数目安
 - `SKIP_RESEARCH` — `true` で ResearchAgent をスキップ（GOOGLE_API_KEY 不要になる）
+- `LOG_LEVEL` — ログレベル（`debug` / `info` / `warn` / `error` / `silent`、デフォルト: `info`）

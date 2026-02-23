@@ -1,5 +1,6 @@
 import { chat, resolveModel } from '../clients/chat';
 import { buildReviewPrompt } from '../prompts/review';
+import { logger } from '../logger';
 import type { ReviewResult, WorkflowStage } from '../types/index';
 
 function defaultSpec(): string {
@@ -15,14 +16,14 @@ export class ReviewAgent {
   }
 
   async review(stage: WorkflowStage, content: string): Promise<ReviewResult> {
-    console.log(`[ReviewAgent] ${stage} ステージをレビュー中...`);
+    logger.info(`[ReviewAgent] ${stage} ステージをレビュー中...`);
     const prompt = buildReviewPrompt(stage, content, this.language);
     const raw = await chat(this.modelSpec, [{ role: 'user', content: prompt }], {
       temperature: 0.3,
     });
 
     const result = this.parseJson(raw);
-    console.log(`[ReviewAgent] ${stage}: ${result.decision} (accuracy=${result.scores.accuracy}, completeness=${result.scores.completeness}, clarity=${result.scores.clarity}, coherence=${result.scores.coherence})`);
+    logger.debug(`[ReviewAgent] ${stage}: ${result.decision} (accuracy=${result.scores.accuracy}, completeness=${result.scores.completeness}, clarity=${result.scores.clarity}, coherence=${result.scores.coherence})`);
     return result;
   }
 
@@ -35,7 +36,7 @@ export class ReviewAgent {
       }
       return parsed;
     } catch {
-      console.warn('[ReviewAgent] JSONパースに失敗しました。approveにフォールバックします。');
+      logger.warn('[ReviewAgent] JSONパースに失敗しました。approveにフォールバックします。');
       return {
         decision: 'approve',
         feedback: 'レビュー結果のパースに失敗したため自動承認',

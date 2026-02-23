@@ -3,6 +3,7 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import 'dotenv/config';
 import { SupervisorAgent } from './agents/SupervisorAgent';
+import { logger } from './logger';
 
 program
   .name('mikan-press')
@@ -39,7 +40,7 @@ const article = await agent.run();
 if (opts.output) {
   mkdirSync(dirname(opts.output), { recursive: true });
   writeFileSync(opts.output, article.content, 'utf-8');
-  console.log(`記事を保存しました: ${opts.output}`);
+  logger.always(`記事を保存しました: ${opts.output}`);
 } else {
-  console.log(article.content);
+  logger.always(article.content);
 }

@@ -3,6 +3,7 @@ import { PlanAgent } from './PlanAgent';
 import { WriterAgent } from './WriterAgent';
 import { EditorAgent } from './EditorAgent';
 import { ReviewAgent } from './ReviewAgent';
+import { logger } from '../logger';
 import type {
   Article,
   SupervisorConfig,
@@ -28,9 +29,9 @@ export class SupervisorAgent {
 
   async run(): Promise<Article> {
     const { topic, language, maxRetries } = this.config;
-    console.log(`\n=== mikan-press: 記事生成開始 (SupervisorAgent) ===`);
-    console.log(`トピック: ${topic}`);
-    console.log(`最大リトライ: ${maxRetries}\n`);
+    logger.always(`\n=== mikan-press: 記事生成開始 (SupervisorAgent) ===`);
+    logger.always(`トピック: ${topic}`);
+    logger.always(`最大リトライ: ${maxRetries}\n`);
 
     const state: WorkflowState = {
       stage: 'research',
@@ -45,7 +46,7 @@ export class SupervisorAgent {
 
     // 1. Research
     if (process.env.SKIP_RESEARCH === 'true') {
-      console.log('[SupervisorAgent] SKIP_RESEARCH=true: リサーチをスキップします');
+      logger.info('[SupervisorAgent] SKIP_RESEARCH=true: リサーチをスキップします');
       state.research = { topic, summary: topic, keyPoints: [], sources: [] };
     } else {
       state.research = await this.executeWithReview(
@@ -106,13 +107,13 @@ export class SupervisorAgent {
       },
     };
 
-    console.log(`\n=== 生成完了 (${state.finalContent!.length}字) ===`);
-    console.log(`レビュー履歴: ${state.reviewHistory.length}件`);
+    logger.always(`\n=== 生成完了 (${state.finalContent!.length}字) ===`);
+    logger.always(`レビュー履歴: ${state.reviewHistory.length}件`);
     const revises = state.reviewHistory.filter((h) => h.result.decision === 'revise').length;
     if (revises > 0) {
-      console.log(`差し戻し回数: ${revises}回`);
+      logger.always(`差し戻し回数: ${revises}回`);
     }
-    console.log('');
+    logger.always('');
 
     return article;
   }
@@ -141,10 +142,10 @@ export class SupervisorAgent {
 
       // revise
       if (attempt < maxRetries) {
-        console.log(`[SupervisorAgent] ${stage} を差し戻します (${attempt + 1}/${maxRetries})`);
+        logger.info(`[SupervisorAgent] ${stage} を差し戻します (${attempt + 1}/${maxRetries})`);
         feedback = review.feedback;
       } else {
-        console.log(`[SupervisorAgent] ${stage} の最大リトライ回数に到達。現在の結果で続行します。`);
+        logger.warn(`[SupervisorAgent] ${stage} の最大リトライ回数に到達。現在の結果で続行します。`);
       }
     }
 

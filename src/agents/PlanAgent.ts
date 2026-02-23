@@ -1,5 +1,6 @@
 import { chat, resolveModel } from '../clients/chat';
 import { buildPlanPrompt } from '../prompts/plan';
+import { logger } from '../logger';
 import type { ArticlePlan, ResearchResult } from '../types/index';
 
 function defaultSpec(): string {
@@ -15,7 +16,7 @@ export class PlanAgent {
   }
 
   async run(research: ResearchResult, feedback?: string): Promise<ArticlePlan> {
-    console.log('[PlanAgent] 記事構成を生成します...');
+    logger.info('[PlanAgent] 記事構成を生成します...');
     let prompt = buildPlanPrompt(research, this.language);
     if (feedback) {
       prompt += `\n\n## 前回のレビューフィードバック\n以下の点を改善してください:\n${feedback}`;
@@ -23,7 +24,7 @@ export class PlanAgent {
     const raw = await chat(this.modelSpec, [{ role: 'user', content: prompt }]);
 
     const parsed = this.parseJson(raw, research.topic);
-    console.log(`[PlanAgent] 完了: "${parsed.title}"`);
+    logger.info(`[PlanAgent] 完了: "${parsed.title}"`);
     return parsed;
   }
 
@@ -32,7 +33,7 @@ export class PlanAgent {
     try {
       return JSON.parse(cleaned) as ArticlePlan;
     } catch {
-      console.warn('[PlanAgent] JSONパースに失敗しました。フォールバック構造を使用します。');
+      logger.warn('[PlanAgent] JSONパースに失敗しました。フォールバック構造を使用します。');
       return {
         title: topic,
         introduction: '',

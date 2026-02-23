@@ -1,5 +1,6 @@
 import { chat, resolveModel } from '../clients/chat';
 import { buildEditorPrompt } from '../prompts/editor';
+import { logger } from '../logger';
 import type { Article } from '../types/index';
 
 function defaultSpec(): string {
@@ -15,7 +16,7 @@ export class EditorAgent {
   }
 
   async run(article: Article, feedback?: string): Promise<string> {
-    console.log('[EditorAgent] 校正を開始します...');
+    logger.info('[EditorAgent] 校正を開始します...');
     let prompt = buildEditorPrompt(article, this.language);
     if (feedback) {
       prompt += `\n\n## 前回のレビューフィードバック\n以下の点を改善してください:\n${feedback}`;
@@ -23,7 +24,7 @@ export class EditorAgent {
     const result = await chat(this.modelSpec, [{ role: 'user', content: prompt }], {
       temperature: 0.5,
     });
-    console.log('[EditorAgent] 校正完了');
+    logger.info('[EditorAgent] 校正完了');
     return result.trim();
   }
 }

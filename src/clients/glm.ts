@@ -9,7 +9,7 @@ const client = new OpenAI({
 });
 
 // Default model: read from env (ZHIPU_MODEL) to support GLM-5 when available
-const DEFAULT_GLM_MODEL = process.env.ZHIPU_MODEL ?? 'glm-4-flash';
+const DEFAULT_GLM_MODEL = process.env.ZHIPU_MODEL ?? 'glm-5';
 
 export async function glmChat(
   messages: ChatMessage[],

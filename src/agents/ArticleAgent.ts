@@ -2,6 +2,7 @@ import { ResearchAgent } from './ResearchAgent';
 import { PlanAgent } from './PlanAgent';
 import { WriterAgent } from './WriterAgent';
 import { EditorAgent } from './EditorAgent';
+import { logger } from '../logger';
 import type { Article, ArticleConfig } from '../types/index';
 
 export class ArticleAgent {
@@ -18,13 +19,13 @@ export class ArticleAgent {
 
   async run(): Promise<Article> {
     const { topic, language } = this.config;
-    console.log(`\n=== mikan-press: 記事生成開始 ===`);
-    console.log(`トピック: ${topic}\n`);
+    logger.always(`\n=== mikan-press: 記事生成開始 ===`);
+    logger.always(`トピック: ${topic}\n`);
 
     // 1. Research (Gemini 2.5 Flash Lite)
     let research;
     if (process.env.SKIP_RESEARCH === 'true') {
-      console.log('[ArticleAgent] SKIP_RESEARCH=true: リサーチをスキップします');
+      logger.info('[ArticleAgent] SKIP_RESEARCH=true: リサーチをスキップします');
       research = { topic, summary: topic, keyPoints: [], sources: [] };
     } else {
       const researchAgent = new ResearchAgent(language);
@@ -65,7 +66,7 @@ export class ArticleAgent {
       },
     };
 
-    console.log(`\n=== 生成完了 (${finalContent.length}字) ===\n`);
+    logger.always(`\n=== 生成完了 (${finalContent.length}字) ===\n`);
     return article;
   }
 }

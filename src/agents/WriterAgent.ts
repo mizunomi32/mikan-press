@@ -4,6 +4,7 @@ import {
   buildSectionPrompt,
   buildConclusionPrompt,
 } from '../prompts/writer';
+import { logger } from '../logger';
 import type { ArticlePlan, ArticleSection, ResearchResult } from '../types/index';
 
 function defaultSpec(): string {
@@ -23,7 +24,7 @@ export class WriterAgent {
     research: ResearchResult,
     feedback?: string
   ): Promise<ArticleSection[]> {
-    console.log('[WriterAgent] 執筆を開始します...');
+    logger.info('[WriterAgent] 執筆を開始します...');
     const feedbackSuffix = feedback
       ? `\n\n## 前回のレビューフィードバック\n以下の点を改善してください:\n${feedback}`
       : '';
@@ -34,7 +35,7 @@ export class WriterAgent {
       { role: 'user', content: buildIntroPrompt(plan, research, this.language) + feedbackSuffix },
     ]);
     sections.push({ title: '__intro', content: introContent.trim() });
-    console.log('[WriterAgent] 導入部 完了');
+    logger.info('[WriterAgent] 導入部 完了');
 
     // Body sections (sequential to maintain coherence)
     for (const section of plan.sections) {
@@ -50,7 +51,7 @@ export class WriterAgent {
         },
       ]);
       sections.push({ title: section.title, content: content.trim() });
-      console.log(`[WriterAgent] セクション "${section.title}" 完了`);
+      logger.debug(`[WriterAgent] セクション "${section.title}" 完了`);
     }
 
     // Conclusion
@@ -58,7 +59,7 @@ export class WriterAgent {
       { role: 'user', content: buildConclusionPrompt(plan, this.language) },
     ]);
     sections.push({ title: '__conclusion', content: conclusionContent.trim() });
-    console.log('[WriterAgent] まとめ 完了');
+    logger.info('[WriterAgent] まとめ 完了');
 
     return sections;
   }

@@ -1,5 +1,6 @@
 import { chat, resolveModel } from '../clients/chat';
 import { buildResearchPrompt } from '../prompts/research';
+import { logger } from '../logger';
 import type { ResearchResult } from '../types/index';
 
 const DEFAULT_SPEC = 'google/gemini-2.5-flash-lite';
@@ -12,7 +13,7 @@ export class ResearchAgent {
   }
 
   async run(topic: string, feedback?: string): Promise<ResearchResult> {
-    console.log('[ResearchAgent] リサーチを開始します...');
+    logger.info('[ResearchAgent] リサーチを開始します...');
     let prompt = buildResearchPrompt(topic, this.language);
     if (feedback) {
       prompt += `\n\n## 前回のレビューフィードバック\n以下の点を改善してください:\n${feedback}`;
@@ -20,7 +21,7 @@ export class ResearchAgent {
     const raw = await chat(this.modelSpec, [{ role: 'user', content: prompt }]);
 
     const parsed = this.parseJson(raw, topic);
-    console.log('[ResearchAgent] リサーチ完了');
+    logger.info('[ResearchAgent] リサーチ完了');
     return parsed;
   }
 
@@ -31,7 +32,7 @@ export class ResearchAgent {
       return JSON.parse(cleaned) as ResearchResult;
     } catch {
       // Fallback: return minimal structure
-      console.warn('[ResearchAgent] JSONパースに失敗しました。フォールバック構造を使用します。');
+      logger.warn('[ResearchAgent] JSONパースに失敗しました。フォールバック構造を使用します。');
       return {
         topic,
         summary: raw.slice(0, 300),
