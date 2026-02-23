@@ -62,6 +62,7 @@ export type PlannerInput = z.infer<typeof plannerInputSchema>;
  */
 export const writerInputSchema = z.object({
   topic: topicSchema,
+  research: textContentSchema,
   outline: textContentSchema,
 });
 
@@ -72,6 +73,7 @@ export type WriterInput = z.infer<typeof writerInputSchema>;
  */
 export const writerRevisionInputSchema = z.object({
   topic: topicSchema,
+  research: textContentSchema,
   outline: textContentSchema,
   draft: textContentSchema,
   review: textContentSchema,
