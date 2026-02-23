@@ -1,8 +1,10 @@
-import { type AgentConfig, createStandardAgent } from "@/agents/agentFactory.js";
+import type { Tool } from "@langchain/core/tools";
+import { createToolEnabledAgent, type ToolEnabledAgentConfig } from "@/agents/agentFactory.js";
 import { EDITOR_HUMAN, EDITOR_SYSTEM } from "@/prompts/editor.js";
+import { urlValidatorTool } from "@/tools/url-validator.js";
 import { type EditorInput, editorInputSchema } from "@/types/prompts.js";
 
-const config: AgentConfig<EditorInput, "editorRetryCount", typeof editorInputSchema> = {
+const config: ToolEnabledAgentConfig<EditorInput, "editorRetryCount", typeof editorInputSchema> = {
   name: "Editor",
   modelType: "editor",
   systemPrompt: EDITOR_SYSTEM,
@@ -13,6 +15,7 @@ const config: AgentConfig<EditorInput, "editorRetryCount", typeof editorInputSch
   nextStatus: "reviewing",
   retryKey: "editorRetryCount",
   completionMessage: "編集完了",
+  tools: [urlValidatorTool as unknown as Tool],
 };
 
-export const editorNode = createStandardAgent(config);
+export const editorNode = createToolEnabledAgent(config);
