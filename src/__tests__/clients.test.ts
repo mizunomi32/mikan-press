@@ -1,8 +1,6 @@
 import { describe, expect, test, mock, beforeEach } from 'bun:test';
 
 // ---------- GLM client tests ----------
-// glmChat の実装詳細は agents.test.ts で間接的にテスト済み。
-// ここではモジュールのエクスポートとモック時の振る舞いを検証する。
 
 describe('glmChat (mocked)', () => {
   const mockGlmChat = mock(() => Promise.resolve(''));
@@ -66,25 +64,26 @@ describe('geminiChat (mocked)', () => {
     mockGeminiChat.mockResolvedValue('Geminiの応答');
   });
 
-  test('プロンプトを送信して応答を取得できる', async () => {
+  test('メッセージを送信して応答を取得できる', async () => {
     const { geminiChat } = await import('../clients/gemini');
-    const result = await geminiChat('テストプロンプト');
+    const result = await geminiChat([{ role: 'user', content: 'テストプロンプト' }]);
 
     expect(result).toBe('Geminiの応答');
     expect(mockGeminiChat).toHaveBeenCalledTimes(1);
   });
 
-  test('プロンプトが引数として渡される', async () => {
+  test('メッセージ配列が引数として渡される', async () => {
     const { geminiChat } = await import('../clients/gemini');
-    await geminiChat('入力プロンプト');
+    const messages = [{ role: 'user' as const, content: '入力プロンプト' }];
+    await geminiChat(messages);
 
-    expect(mockGeminiChat).toHaveBeenCalledWith('入力プロンプト');
+    expect(mockGeminiChat).toHaveBeenCalledWith(messages);
   });
 
   test('空文字を返すケース', async () => {
     mockGeminiChat.mockResolvedValueOnce('');
     const { geminiChat } = await import('../clients/gemini');
-    const result = await geminiChat('テスト');
+    const result = await geminiChat([{ role: 'user', content: 'テスト' }]);
 
     expect(result).toBe('');
   });

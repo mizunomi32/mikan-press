@@ -1,3 +1,15 @@
+export interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
+export type Provider = 'google' | 'zhipu' | 'openai' | 'openrouter';
+
+export interface ModelSpec {
+  provider: Provider;
+  model: string;
+}
+
 export interface ArticleConfig {
   topic: string;
   language?: 'ja' | 'en';
@@ -34,4 +46,26 @@ export interface Article {
     generatedAt: string;
     wordCount: number;
   };
+}
+
+export type WorkflowStage = 'research' | 'plan' | 'write' | 'edit';
+
+export interface ReviewResult {
+  decision: 'approve' | 'revise';
+  feedback: string;
+  scores: { accuracy: number; completeness: number; clarity: number; coherence: number };
+}
+
+export interface WorkflowState {
+  stage: WorkflowStage | 'done';
+  research?: ResearchResult;
+  plan?: ArticlePlan;
+  sections?: ArticleSection[];
+  finalContent?: string;
+  retries: Record<WorkflowStage, number>;
+  reviewHistory: Array<{ stage: WorkflowStage; result: ReviewResult; attempt: number }>;
+}
+
+export interface SupervisorConfig extends ArticleConfig {
+  maxRetries?: number;
 }

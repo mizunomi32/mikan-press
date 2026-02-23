@@ -1,4 +1,4 @@
-import { glmChat } from '../clients/glm';
+import { chat, resolveModel } from '../clients/chat';
 import {
   buildIntroPrompt,
   buildSectionPrompt,
@@ -6,26 +6,39 @@ import {
 } from '../prompts/writer';
 import type { ArticlePlan, ArticleSection, ResearchResult } from '../types/index';
 
+function defaultSpec(): string {
+  const zhipuModel = process.env.ZHIPU_MODEL ?? 'glm-4-flash';
+  return `zhipu/${zhipuModel}`;
+}
+
 export class WriterAgent {
-  constructor(private language: string = 'ja') {}
+  private modelSpec: string;
+
+  constructor(private language: string = 'ja') {
+    this.modelSpec = resolveModel('WRITER_MODEL', defaultSpec());
+  }
 
   async run(
     plan: ArticlePlan,
-    research: ResearchResult
+    research: ResearchResult,
+    feedback?: string
   ): Promise<ArticleSection[]> {
     console.log('[WriterAgent] 執筆を開始します...');
+    const feedbackSuffix = feedback
+      ? `\n\n## 前回のレビューフィードバック\n以下の点を改善してください:\n${feedback}`
+      : '';
     const sections: ArticleSection[] = [];
 
     // Introduction
-    const introContent = await glmChat([
-      { role: 'user', content: buildIntroPrompt(plan, research, this.language) },
+    const introContent = await chat(this.modelSpec, [
+      { role: 'user', content: buildIntroPrompt(plan, research, this.language) + feedbackSuffix },
     ]);
     sections.push({ title: '__intro', content: introContent.trim() });
     console.log('[WriterAgent] 導入部 完了');
 
     // Body sections (sequential to maintain coherence)
     for (const section of plan.sections) {
-      const content = await glmChat([
+      const content = await chat(this.modelSpec, [
         {
           role: 'user',
           content: buildSectionPrompt(
@@ -41,7 +54,7 @@ export class WriterAgent {
     }
 
     // Conclusion
-    const conclusionContent = await glmChat([
+    const conclusionContent = await chat(this.modelSpec, [
       { role: 'user', content: buildConclusionPrompt(plan, this.language) },
     ]);
     sections.push({ title: '__conclusion', content: conclusionContent.trim() });

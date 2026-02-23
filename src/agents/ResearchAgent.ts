@@ -1,14 +1,23 @@
-import { geminiChat } from '../clients/gemini';
+import { chat, resolveModel } from '../clients/chat';
 import { buildResearchPrompt } from '../prompts/research';
 import type { ResearchResult } from '../types/index';
 
-export class ResearchAgent {
-  constructor(private language: string = 'ja') {}
+const DEFAULT_SPEC = 'google/gemini-2.5-flash-lite';
 
-  async run(topic: string): Promise<ResearchResult> {
+export class ResearchAgent {
+  private modelSpec: string;
+
+  constructor(private language: string = 'ja') {
+    this.modelSpec = resolveModel('RESEARCH_MODEL', DEFAULT_SPEC);
+  }
+
+  async run(topic: string, feedback?: string): Promise<ResearchResult> {
     console.log('[ResearchAgent] リサーチを開始します...');
-    const prompt = buildResearchPrompt(topic, this.language);
-    const raw = await geminiChat(prompt);
+    let prompt = buildResearchPrompt(topic, this.language);
+    if (feedback) {
+      prompt += `\n\n## 前回のレビューフィードバック\n以下の点を改善してください:\n${feedback}`;
+    }
+    const raw = await chat(this.modelSpec, [{ role: 'user', content: prompt }]);
 
     const parsed = this.parseJson(raw, topic);
     console.log('[ResearchAgent] リサーチ完了');

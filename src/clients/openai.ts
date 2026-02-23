@@ -2,21 +2,17 @@ import OpenAI from 'openai';
 import 'dotenv/config';
 import type { ChatMessage } from '../types/index';
 
-// GLM-5 is compatible with the OpenAI API format
 const client = new OpenAI({
-  apiKey: process.env.ZHIPU_API_KEY ?? '',
-  baseURL: process.env.ZHIPU_BASE_URL ?? 'https://open.bigmodel.cn/api/paas/v4',
+  apiKey: process.env.OPENAI_API_KEY ?? '',
+  baseURL: process.env.OPENAI_BASE_URL,
 });
 
-// Default model: read from env (ZHIPU_MODEL) to support GLM-5 when available
-const DEFAULT_GLM_MODEL = process.env.ZHIPU_MODEL ?? 'glm-4-flash';
-
-export async function glmChat(
+export async function openaiChat(
   messages: ChatMessage[],
   options: { model?: string; temperature?: number } = {}
 ): Promise<string> {
   const response = await client.chat.completions.create({
-    model: options.model ?? DEFAULT_GLM_MODEL,
+    model: options.model ?? 'gpt-4o',
     messages,
     temperature: options.temperature ?? 0.7,
   });

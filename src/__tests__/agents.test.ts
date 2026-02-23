@@ -1,17 +1,13 @@
 import { describe, expect, test, mock, beforeEach } from 'bun:test';
 import type { ResearchResult, ArticlePlan } from '../types/index';
 
-// ---------- mock API clients ----------
+// ---------- mock chat() ----------
 
-const mockGeminiChat = mock(() => Promise.resolve(''));
-const mockGlmChat = mock(() => Promise.resolve(''));
+const mockChat = mock(() => Promise.resolve(''));
 
-mock.module('../clients/gemini', () => ({
-  geminiChat: mockGeminiChat,
-}));
-
-mock.module('../clients/glm', () => ({
-  glmChat: mockGlmChat,
+mock.module('../clients/chat', () => ({
+  chat: mockChat,
+  resolveModel: (envVar: string, defaultSpec: string) => defaultSpec,
 }));
 
 // import AFTER mock.module so mocks take effect
@@ -43,11 +39,11 @@ const validPlanJson: ArticlePlan = {
 
 describe('ResearchAgent', () => {
   beforeEach(() => {
-    mockGeminiChat.mockReset();
+    mockChat.mockReset();
   });
 
   test('正常な JSON をパースできる', async () => {
-    mockGeminiChat.mockResolvedValueOnce(JSON.stringify(validResearchJson));
+    mockChat.mockResolvedValueOnce(JSON.stringify(validResearchJson));
     const agent = new ResearchAgent('ja');
     const result = await agent.run('テスト');
 
@@ -58,7 +54,7 @@ describe('ResearchAgent', () => {
 
   test('コードフェンス付き JSON をパースできる', async () => {
     const fenced = '```json\n' + JSON.stringify(validResearchJson) + '\n```';
-    mockGeminiChat.mockResolvedValueOnce(fenced);
+    mockChat.mockResolvedValueOnce(fenced);
     const agent = new ResearchAgent('ja');
     const result = await agent.run('テスト');
 
@@ -67,7 +63,7 @@ describe('ResearchAgent', () => {
   });
 
   test('不正な文字列でフォールバック構造を返す', async () => {
-    mockGeminiChat.mockResolvedValueOnce('これはJSONではありません');
+    mockChat.mockResolvedValueOnce('これはJSONではありません');
     const agent = new ResearchAgent('ja');
     const result = await agent.run('テスト');
 
@@ -83,11 +79,11 @@ describe('ResearchAgent', () => {
 
 describe('PlanAgent', () => {
   beforeEach(() => {
-    mockGlmChat.mockReset();
+    mockChat.mockReset();
   });
 
   test('正常な JSON をパースできる', async () => {
-    mockGlmChat.mockResolvedValueOnce(JSON.stringify(validPlanJson));
+    mockChat.mockResolvedValueOnce(JSON.stringify(validPlanJson));
     const agent = new PlanAgent('ja');
     const result = await agent.run(validResearchJson);
 
@@ -97,7 +93,7 @@ describe('PlanAgent', () => {
 
   test('コードフェンス付き JSON をパースできる', async () => {
     const fenced = '```\n' + JSON.stringify(validPlanJson) + '\n```';
-    mockGlmChat.mockResolvedValueOnce(fenced);
+    mockChat.mockResolvedValueOnce(fenced);
     const agent = new PlanAgent('ja');
     const result = await agent.run(validResearchJson);
 
@@ -105,7 +101,7 @@ describe('PlanAgent', () => {
   });
 
   test('不正な文字列でフォールバック構造を返す', async () => {
-    mockGlmChat.mockResolvedValueOnce('パースできない文字列');
+    mockChat.mockResolvedValueOnce('パースできない文字列');
     const agent = new PlanAgent('ja');
     const result = await agent.run(validResearchJson);
 
@@ -119,12 +115,12 @@ describe('PlanAgent', () => {
 
 describe('WriterAgent', () => {
   beforeEach(() => {
-    mockGlmChat.mockReset();
+    mockChat.mockReset();
   });
 
   test('intro + body sections + conclusion を返す', async () => {
     // intro, section1, section2, conclusion の 4 回呼ばれる
-    mockGlmChat
+    mockChat
       .mockResolvedValueOnce('導入文の内容')
       .mockResolvedValueOnce('セクション1の内容')
       .mockResolvedValueOnce('セクション2の内容')
@@ -143,7 +139,7 @@ describe('WriterAgent', () => {
   });
 
   test('レスポンスの前後空白が除去される', async () => {
-    mockGlmChat
+    mockChat
       .mockResolvedValueOnce('  導入文  ')
       .mockResolvedValueOnce(' 本文1 ')
       .mockResolvedValueOnce(' 本文2 ')
@@ -161,11 +157,11 @@ describe('WriterAgent', () => {
 
 describe('EditorAgent', () => {
   beforeEach(() => {
-    mockGlmChat.mockReset();
+    mockChat.mockReset();
   });
 
   test('校正結果を返す', async () => {
-    mockGlmChat.mockResolvedValueOnce('  校正済みの記事本文  ');
+    mockChat.mockResolvedValueOnce('  校正済みの記事本文  ');
     const agent = new EditorAgent('ja');
     const article = {
       title: 'テスト',

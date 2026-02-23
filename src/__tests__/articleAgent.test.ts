@@ -1,17 +1,13 @@
 import { describe, expect, test, mock, beforeEach } from 'bun:test';
 import type { ResearchResult, ArticlePlan } from '../types/index';
 
-// ---------- mock API clients ----------
+// ---------- mock chat() ----------
 
-const mockGeminiChat = mock(() => Promise.resolve(''));
-const mockGlmChat = mock(() => Promise.resolve(''));
+const mockChat = mock(() => Promise.resolve(''));
 
-mock.module('../clients/gemini', () => ({
-  geminiChat: mockGeminiChat,
-}));
-
-mock.module('../clients/glm', () => ({
-  glmChat: mockGlmChat,
+mock.module('../clients/chat', () => ({
+  chat: mockChat,
+  resolveModel: (envVar: string, defaultSpec: string) => defaultSpec,
 }));
 
 const { ArticleAgent } = await import('../agents/ArticleAgent');
@@ -36,25 +32,24 @@ const planJson: ArticlePlan = {
 
 describe('ArticleAgent', () => {
   beforeEach(() => {
-    mockGeminiChat.mockReset();
-    mockGlmChat.mockReset();
+    mockChat.mockReset();
   });
 
   test('パイプライン全体が正しく動作し Article を返す', async () => {
-    // ResearchAgent (gemini)
-    mockGeminiChat.mockResolvedValueOnce(JSON.stringify(researchJson));
+    // ResearchAgent
+    mockChat.mockResolvedValueOnce(JSON.stringify(researchJson));
 
-    // PlanAgent (glm)
-    mockGlmChat.mockResolvedValueOnce(JSON.stringify(planJson));
+    // PlanAgent
+    mockChat.mockResolvedValueOnce(JSON.stringify(planJson));
 
-    // WriterAgent (glm): intro + 1 section + conclusion = 3 calls
-    mockGlmChat
+    // WriterAgent: intro + 1 section + conclusion = 3 calls
+    mockChat
       .mockResolvedValueOnce('導入文の内容')
       .mockResolvedValueOnce('メインセクションの内容')
       .mockResolvedValueOnce('まとめの内容');
 
-    // EditorAgent (glm)
-    mockGlmChat.mockResolvedValueOnce('# 統合テスト記事\n\n最終的な記事本文');
+    // EditorAgent
+    mockChat.mockResolvedValueOnce('# 統合テスト記事\n\n最終的な記事本文');
 
     const agent = new ArticleAgent({ topic: '統合テスト' });
     const article = await agent.run();
@@ -69,8 +64,8 @@ describe('ArticleAgent', () => {
   });
 
   test('デフォルト設定が適用される', async () => {
-    mockGeminiChat.mockResolvedValueOnce(JSON.stringify(researchJson));
-    mockGlmChat
+    mockChat.mockResolvedValueOnce(JSON.stringify(researchJson));
+    mockChat
       .mockResolvedValueOnce(JSON.stringify(planJson))
       .mockResolvedValueOnce('導入')
       .mockResolvedValueOnce('本文')
@@ -85,8 +80,8 @@ describe('ArticleAgent', () => {
   });
 
   test('英語設定で動作する', async () => {
-    mockGeminiChat.mockResolvedValueOnce(JSON.stringify(researchJson));
-    mockGlmChat
+    mockChat.mockResolvedValueOnce(JSON.stringify(researchJson));
+    mockChat
       .mockResolvedValueOnce(JSON.stringify(planJson))
       .mockResolvedValueOnce('Introduction')
       .mockResolvedValueOnce('Main content')
@@ -101,8 +96,8 @@ describe('ArticleAgent', () => {
   });
 
   test('API 呼び出し回数が正しい', async () => {
-    mockGeminiChat.mockResolvedValueOnce(JSON.stringify(researchJson));
-    mockGlmChat
+    mockChat.mockResolvedValueOnce(JSON.stringify(researchJson));
+    mockChat
       .mockResolvedValueOnce(JSON.stringify(planJson))
       .mockResolvedValueOnce('導入')
       .mockResolvedValueOnce('本文')
@@ -112,9 +107,7 @@ describe('ArticleAgent', () => {
     const agent = new ArticleAgent({ topic: 'カウントテスト' });
     await agent.run();
 
-    // Gemini: ResearchAgent で 1 回
-    expect(mockGeminiChat).toHaveBeenCalledTimes(1);
-    // GLM: PlanAgent(1) + WriterAgent(intro + 1section + conclusion = 3) + EditorAgent(1) = 5
-    expect(mockGlmChat).toHaveBeenCalledTimes(5);
+    // chat() は全部で 6 回: Research(1) + Plan(1) + Writer(intro + 1section + conclusion = 3) + Editor(1)
+    expect(mockChat).toHaveBeenCalledTimes(6);
   });
 });

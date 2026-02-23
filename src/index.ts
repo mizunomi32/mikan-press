@@ -2,7 +2,7 @@ import { program } from 'commander';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import 'dotenv/config';
-import { ArticleAgent } from './agents/ArticleAgent';
+import { SupervisorAgent } from './agents/SupervisorAgent';
 
 program
   .name('mikan-press')
@@ -13,7 +13,8 @@ program
   .requiredOption('-t, --topic <topic>', '記事のトピック')
   .option('-l, --language <lang>', '出力言語 (ja / en)', 'ja')
   .option('-n, --length <number>', '目標文字数', '3000')
-  .option('-o, --output <path>', '出力ファイルパス (省略時は標準出力)');
+  .option('-o, --output <path>', '出力ファイルパス (省略時は標準出力)')
+  .option('--max-retries <number>', 'レビュー差し戻し最大回数', '2');
 
 program.parse();
 
@@ -22,13 +23,15 @@ const opts = program.opts<{
   language: 'ja' | 'en';
   length: string;
   output?: string;
+  maxRetries: string;
 }>();
 
-const agent = new ArticleAgent({
+const agent = new SupervisorAgent({
   topic: opts.topic,
   language: opts.language,
   maxLength: parseInt(opts.length, 10),
   output: opts.output,
+  maxRetries: parseInt(opts.maxRetries, 10),
 });
 
 const article = await agent.run();

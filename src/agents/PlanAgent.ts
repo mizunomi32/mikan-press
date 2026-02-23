@@ -1,14 +1,26 @@
-import { glmChat } from '../clients/glm';
+import { chat, resolveModel } from '../clients/chat';
 import { buildPlanPrompt } from '../prompts/plan';
 import type { ArticlePlan, ResearchResult } from '../types/index';
 
-export class PlanAgent {
-  constructor(private language: string = 'ja') {}
+function defaultSpec(): string {
+  const zhipuModel = process.env.ZHIPU_MODEL ?? 'glm-4-flash';
+  return `zhipu/${zhipuModel}`;
+}
 
-  async run(research: ResearchResult): Promise<ArticlePlan> {
+export class PlanAgent {
+  private modelSpec: string;
+
+  constructor(private language: string = 'ja') {
+    this.modelSpec = resolveModel('PLAN_MODEL', defaultSpec());
+  }
+
+  async run(research: ResearchResult, feedback?: string): Promise<ArticlePlan> {
     console.log('[PlanAgent] 記事構成を生成します...');
-    const prompt = buildPlanPrompt(research, this.language);
-    const raw = await glmChat([{ role: 'user', content: prompt }]);
+    let prompt = buildPlanPrompt(research, this.language);
+    if (feedback) {
+      prompt += `\n\n## 前回のレビューフィードバック\n以下の点を改善してください:\n${feedback}`;
+    }
+    const raw = await chat(this.modelSpec, [{ role: 'user', content: prompt }]);
 
     const parsed = this.parseJson(raw, research.topic);
     console.log(`[PlanAgent] 完了: "${parsed.title}"`);
