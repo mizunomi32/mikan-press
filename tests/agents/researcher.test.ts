@@ -6,7 +6,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { researcherNode } from "../../src/agents/researcher.js";
-import { initialFixture, skipResearchFixture } from "../mocks/mockState.js";
+import { initialFixture } from "../mocks/mockState.js";
 
 describe("researcherNode", () => {
   describe("スキップ条件", () => {
@@ -23,7 +23,7 @@ describe("researcherNode", () => {
     });
 
     test("skipResearch=false で通常実行", async () => {
-      const state = {
+      const _state = {
         ...initialFixture,
         skipResearch: false,
       };

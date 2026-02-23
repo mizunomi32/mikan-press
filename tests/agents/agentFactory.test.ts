@@ -1,12 +1,72 @@
 /**
  * agentFactory.ts のテスト
  *
- * parseRetryResponse(), createStandardAgent(), createReviewerAgent() のテスト
+ * parseRetryResponse(), createStandardAgent(), createReviewerAgent(), createToolEnabledAgent() のテスト
  */
 
 import { describe, expect, test } from "bun:test";
-import { parseRetryResponse } from "../../src/agents/agentFactory.js";
-import { sampleResponses } from "../mocks/fixtures.js";
+import { StructuredTool } from "@langchain/core/tools";
+import { z } from "zod";
+import {
+  createToolEnabledAgent,
+  parseRetryResponse,
+  type ToolEnabledAgentConfig,
+} from "../../src/agents/agentFactory.js";
+
+// モックツール
+class MockTool extends StructuredTool {
+  name = "mock_tool";
+  description = "Mock tool for testing";
+  schema = z.object({ input: z.string() });
+
+  async _call(_input: { input: string }): Promise<string> {
+    return "mock result";
+  }
+}
+
+describe("createToolEnabledAgent", () => {
+  test("ツール付きエージェント設定を正しく処理できる", () => {
+    const mockTool = new MockTool();
+
+    const config: ToolEnabledAgentConfig<{ topic: string }, "researcherRetryCount", z.ZodType> = {
+      name: "TestAgent",
+      modelType: "researcher",
+      systemPrompt: "You are a test agent",
+      humanPromptTemplate: "Test: {topic}",
+      inputSchema: z.object({ topic: z.string() }),
+      inputExtractor: (state) => ({ topic: state.topic }),
+      outputMapper: (content) => ({ research: content }),
+      nextStatus: "planning",
+      retryKey: "researcherRetryCount",
+      completionMessage: "完了",
+      tools: [mockTool],
+    };
+
+    const node = createToolEnabledAgent(config);
+    expect(node).toBeDefined();
+    expect(typeof node).toBe("function");
+  });
+
+  test("ツールなしでも動作する", () => {
+    const config: ToolEnabledAgentConfig<{ topic: string }, "researcherRetryCount", z.ZodType> = {
+      name: "TestAgent",
+      modelType: "researcher",
+      systemPrompt: "You are a test agent",
+      humanPromptTemplate: "Test: {topic}",
+      inputSchema: z.object({ topic: z.string() }),
+      inputExtractor: (state) => ({ topic: state.topic }),
+      outputMapper: (content) => ({ research: content }),
+      nextStatus: "planning",
+      retryKey: "researcherRetryCount",
+      completionMessage: "完了",
+      tools: [],
+    };
+
+    const node = createToolEnabledAgent(config);
+    expect(node).toBeDefined();
+    expect(typeof node).toBe("function");
+  });
+});
 
 describe("parseRetryResponse", () => {
   describe("RETRY判定", () => {
@@ -166,6 +226,3 @@ PROCEED
     });
   });
 });
-
-// TODO: createStandardAgent のテスト（モックモデルを使用）
-// TODO: createReviewerAgent のテスト（モックモデルを使用）

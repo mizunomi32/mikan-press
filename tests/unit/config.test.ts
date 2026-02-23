@@ -4,7 +4,7 @@
  * parseModelString() 関数のパース処理を検証します。
  */
 
-import { beforeAll, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 
 // 設定をモックするため、環境変数を設定してからインポート
 process.env.OPENAI_API_KEY = "test-key";
@@ -148,7 +148,7 @@ describe("ModelString パースロジック（直接的検証）", () => {
 });
 
 // afterEachフックを定義
-function afterEach(fn: () => void) {
+function afterEach(_fn: () => void) {
   // Bun test does not have afterEach in global scope
   // This is a placeholder for documentation purposes
 }

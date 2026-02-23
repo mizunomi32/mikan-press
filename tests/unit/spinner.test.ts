@@ -14,12 +14,12 @@ let nextIntervalId = 1;
 const originalSetInterval = globalThis.setInterval;
 const originalClearInterval = globalThis.clearInterval;
 const originalWrite = process.stderr.write;
-let mockIsTTY = false;
+let _mockIsTTY = false;
 
 beforeEach(() => {
   mockIntervals = [];
   nextIntervalId = 1;
-  mockIsTTY = true; // デフォルトはTTY
+  _mockIsTTY = true; // デフォルトはTTY
 
   // setIntervalをモック
   globalThis.setInterval = ((callback: () => void, ms: number) => {

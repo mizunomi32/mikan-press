@@ -6,8 +6,10 @@
  * ノード生成を可能にします。
  */
 
-import type { AIMessage } from "@langchain/core/messages";
+import type { AIMessage, BaseMessage } from "@langchain/core/messages";
+import { ToolMessage } from "@langchain/core/messages";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
+import type { Tool } from "@langchain/core/tools";
 import type { z } from "zod";
 import { type AgentRole, createModel } from "@/config.js";
 import { logger } from "@/logger.js";
@@ -66,6 +68,20 @@ export interface AgentConfig<
   skipResponse?: Partial<typeof ArticleState.State>;
   /** 改稿用の設定（オプション・Writer用） */
   revisionConfig?: RevisionConfig<TInput, TInputSchema>;
+}
+
+/**
+ * ツール対応エージェントの設定オブジェクト
+ *
+ * AgentConfigを拡張し、ツール使用を追加でサポートします。
+ */
+export interface ToolEnabledAgentConfig<
+  TInput extends Record<string, unknown>,
+  TRetryKey extends RetryKey,
+  TInputSchema extends z.ZodType,
+> extends AgentConfig<TInput, TRetryKey, TInputSchema> {
+  /** 使用可能なツール配列（オプション） */
+  tools?: Tool[];
 }
 
 /**
@@ -145,6 +161,127 @@ export async function executeAgentChain<T extends Record<string, unknown>>(
   const result = await withSpinner(`[${agentName}] 思考中...`, () => chain.invoke(input));
   logTokenUsage(agentName, result as unknown);
   return result as AIMessage;
+}
+
+/**
+ * ツール実行ループの最大反復回数
+ */
+const MAX_TOOL_ITERATIONS = 5;
+
+/**
+ * ツール対応モデルチェーン実行（ツール実行ループ付き）
+ *
+ * 1. プロンプトをメッセージに変換
+ * 2. モデルにツール定義付きで送信
+ * 3. モデルが tool_calls を返した場合、ツールを実行
+ * 4. ツール結果を ToolMessage として会話履歴に追加
+ * 5. モデルに再送信（最終回答まで繰り返し）
+ *
+ * @param agentName - エージェント名（ログ用）
+ * @param modelType - モデル種別
+ * @param prompt - チャットプロンプトテンプレート
+ * @param input - プロンプト入力値
+ * @param tools - 使用可能なツール配列
+ * @returns AI応答メッセージとツール使用有無
+ */
+export async function executeToolEnabledAgentChain<T extends Record<string, unknown>>(
+  agentName: string,
+  modelType: AgentRole,
+  prompt: ChatPromptTemplate,
+  input: T,
+  tools: Tool[],
+): Promise<{ result: AIMessage; toolCallsUsed: boolean }> {
+  const model = createModel(modelType);
+
+  logger.debug(`[${agentName}] モデル: ${model.constructor.name}`);
+
+  // bindToolsはLangChainの標準メソッド。型チェックをバイパス
+  const modelWithTools = (model as unknown as { bindTools: (tools: Tool[]) => typeof model }).bindTools(
+    tools,
+  );
+  logger.debug(`[${agentName}] ツールバインディング完了: ${tools.map((t) => t.name).join(", ")}`);
+
+  // プロンプトをメッセージに変換
+  const messages: BaseMessage[] = await prompt.formatMessages(input as Record<string, unknown>);
+  let toolCallsUsed = false;
+
+  // ツール名→ツールインスタンスのマップ
+  const toolMap = new Map(tools.map((t) => [t.name, t]));
+
+  for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
+    // モデル呼び出し
+    const aiMessage = await withSpinner(
+      `[${agentName}] 思考中...${iteration > 0 ? `（ツール実行後 ${iteration}回目）` : ""}`,
+      () => modelWithTools.invoke(messages),
+    ) as AIMessage;
+
+    logTokenUsage(agentName, aiMessage as unknown);
+
+    // tool_calls があるか確認
+    const toolCalls = aiMessage.tool_calls ?? [];
+    if (toolCalls.length === 0) {
+      // ツールコールなし → 最終回答として返す
+      return { result: aiMessage, toolCallsUsed };
+    }
+
+    // ツールコールを実行
+    toolCallsUsed = true;
+    logger.info(`[${agentName}] ${toolCalls.length}個のツールコールを実行します`);
+
+    // AIメッセージを会話履歴に追加（tool_calls を含む）
+    messages.push(aiMessage);
+
+    for (const toolCall of toolCalls) {
+      const toolName = toolCall.name;
+      const toolArgs = toolCall.args;
+      const toolCallId = toolCall.id ?? `call_${Date.now()}`;
+
+      logger.info(`[${agentName}]   → ${toolName}(${JSON.stringify(toolArgs).slice(0, 200)})`);
+
+      const tool = toolMap.get(toolName);
+      if (!tool) {
+        logger.warn(`[${agentName}] 未知のツール: ${toolName}`);
+        messages.push(
+          new ToolMessage({
+            content: `エラー: ツール "${toolName}" は利用できません`,
+            tool_call_id: toolCallId,
+          }),
+        );
+        continue;
+      }
+
+      try {
+        const toolResult = await tool.invoke(toolArgs);
+        const resultStr = typeof toolResult === "string" ? toolResult : JSON.stringify(toolResult);
+        const truncatedResult = resultStr.length > 300 ? `${resultStr.slice(0, 300)}...` : resultStr;
+        logger.info(`[${agentName}]   ← ${toolName}: ${truncatedResult}`);
+
+        messages.push(
+          new ToolMessage({
+            content: resultStr,
+            tool_call_id: toolCallId,
+          }),
+        );
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        logger.error(`[${agentName}]   ✗ ${toolName} エラー: ${errorMsg}`);
+        messages.push(
+          new ToolMessage({
+            content: `ツール実行エラー: ${errorMsg}`,
+            tool_call_id: toolCallId,
+          }),
+        );
+      }
+    }
+  }
+
+  // 最大反復回数到達 → 最後のモデル呼び出し（ツールなし）
+  logger.warn(`[${agentName}] ツール実行ループが最大回数(${MAX_TOOL_ITERATIONS})に達しました`);
+  const finalResult = await withSpinner(`[${agentName}] 最終応答生成中...`, () =>
+    modelWithTools.invoke(messages),
+  ) as AIMessage;
+  logTokenUsage(agentName, finalResult as unknown);
+  return { result: finalResult, toolCallsUsed };
 }
 
 // ============================================================================
@@ -339,6 +476,165 @@ export function createReviewerAgent<TInputSchema extends z.ZodType>(
       reviewCount: currentCount + 1,
       finalArticle: isDone ? state.editedDraft : undefined,
       status: (isDone ? "done" : "writing") as typeof ArticleState.State.status,
+    };
+  };
+}
+
+/**
+ * ツール対応エージェントノードを生成
+ *
+ * 標準エージェントと同様の処理に加え、LangChainツールをモデルにバインドします。
+ * ツールを使用するエージェント（Researcher等）で使用します。
+ *
+ * @param config - ツール対応エージェント設定オブジェクト
+ * @returns LangGraphノード関数
+ */
+export function createToolEnabledAgent<
+  TInput extends Record<string, unknown>,
+  TRetryKey extends RetryKey,
+  TInputSchema extends z.ZodType,
+>(
+  config: ToolEnabledAgentConfig<TInput, TRetryKey, TInputSchema>,
+): (state: typeof ArticleState.State) => Promise<Partial<typeof ArticleState.State>> {
+  const {
+    name,
+    modelType,
+    systemPrompt,
+    humanPromptTemplate,
+    inputSchema,
+    inputExtractor,
+    outputMapper,
+    nextStatus,
+    retryKey,
+    completionMessage,
+    skipCondition,
+    skipResponse,
+    revisionConfig,
+    tools = [],
+  } = config;
+
+  // 改稿用プロンプトの事前構築（設定がある場合）
+  const revisionPrompt = revisionConfig
+    ? ChatPromptTemplate.fromMessages([
+        ["system", systemPrompt],
+        ["human", revisionConfig.humanPromptTemplate],
+      ])
+    : null;
+
+  // 初回用プロンプト
+  const initialPrompt = ChatPromptTemplate.fromMessages([
+    ["system", systemPrompt],
+    ["human", humanPromptTemplate],
+  ]);
+
+  return async (state: typeof ArticleState.State): Promise<Partial<typeof ArticleState.State>> => {
+    // スキップ条件チェック
+    if (skipCondition && skipResponse && skipCondition(state)) {
+      logger.info(`[${name}] 処理をスキップします`);
+      return skipResponse;
+    }
+
+    // 改稿モード判定
+    const isRevision = revisionConfig?.condition(state);
+
+    // 現在の試行回数
+    const currentCount = (state[retryKey] ?? 0) as number;
+    const attempt = currentCount + 1;
+
+    // 入力値の抽出
+    const extractedInput = isRevision
+      ? (revisionConfig?.inputExtractor(state) as TInput)
+      : inputExtractor(state);
+
+    // 入力バリデーション（改稿時は revisionConfig.inputSchema、初回は inputSchema）
+    const schema = isRevision && revisionConfig ? revisionConfig.inputSchema : inputSchema;
+    const input = validatePromptInput(schema, extractedInput as Record<string, unknown>, name);
+
+    // デバッグログ（各エージェント固有の値）
+    logger.debug(`[${name}] 入力:`, JSON.stringify(input).slice(0, 200));
+
+    // ツール使用ログ
+    if (tools.length > 0) {
+      logger.debug(`[${name}] 利用可能なツール: ${tools.map((t) => t.name).join(", ")}`);
+    }
+
+    // 開始ログ
+    logger.info(
+      `[${name}] 処理を開始します...（${attempt}回目${attempt > 1 ? "・自己ループ" : ""}）`,
+    );
+
+    // モデル実行（ツール対応・ツール実行ループ付き）
+    const prompt = isRevision && revisionPrompt ? revisionPrompt : initialPrompt;
+    const { result, toolCallsUsed } = await executeToolEnabledAgentChain(
+      name,
+      modelType,
+      prompt,
+      input as Record<string, unknown>,
+      tools,
+    );
+
+    // レスポンス解析
+    let content: string;
+    if (typeof result.content === "string") {
+      content = result.content;
+    } else if (Array.isArray(result.content)) {
+      content = result.content
+        .map((item) => {
+          if (typeof item === "string") return item;
+          if ("text" in item && typeof item.text === "string") return item.text;
+          return "";
+        })
+        .filter(Boolean)
+        .join("\n");
+    } else {
+      content = JSON.stringify(result.content);
+    }
+
+    // ツール使用状況のログ
+    if (tools.length > 0 && !toolCallsUsed) {
+      logger.warn(
+        `[${name}] ツールが指定されていますが、モデルはツールを呼び出しませんでした。`,
+      );
+    }
+
+    // Researcherエージェント特別処理: ツールが使われず出力が短すぎる場合はRETRY
+    let forceRetry = false;
+    if (name === "Researcher" && !toolCallsUsed && tools.length > 0 && content.length < 300) {
+      logger.warn(
+        `[${name}] 出力が短すぎます（${content.length}文字）。ツール対応モデルの使用を推奨します。`,
+      );
+      forceRetry = true;
+    }
+
+    const { needRetry: parsedNeedRetry } = parseRetryResponse(content);
+    // 強制RETRYが有効な場合、またはパース結果がRETRYの場合
+    const needRetry = forceRetry || parsedNeedRetry;
+
+    // デバッグログ（応答内容）
+    logger.debug(`[${name}] 応答:`, content.slice(0, 200));
+
+    // リトライカウント更新
+    const nextCount = needRetry ? currentCount + 1 : currentCount;
+
+    // 自己ループ判定ログ
+    const retryOrProceed = needRetry ? "RETRY" : "PROCEED";
+    const nextAction = needRetry
+      ? ` → 再実行します（次は${nextCount + 1}回目）`
+      : ` → ${nextStatus} へ`;
+    logger.info(`[${name}] 自己ループ判定: ${retryOrProceed}（${attempt}回目実施）${nextAction}`);
+
+    // 完了ログ（PROCEED時のみ）
+    if (!needRetry) {
+      const message = isRevision ? revisionConfig?.completionMessage : completionMessage;
+      logger.info(`[${name}] ${message}`);
+    }
+
+    // ステート更新値の構築
+    return {
+      ...outputMapper(content, state),
+      status: nextStatus as typeof ArticleState.State.status,
+      needRetry,
+      [retryKey]: nextCount,
     };
   };
 }
