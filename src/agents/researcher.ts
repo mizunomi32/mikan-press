@@ -1,6 +1,7 @@
 import type { Tool } from "@langchain/core/tools";
 import { createToolEnabledAgent, type ToolEnabledAgentConfig } from "@/agents/agentFactory.js";
 import { RESEARCHER_HUMAN, RESEARCHER_SYSTEM } from "@/prompts/researcher.js";
+import { webFetchTool } from "@/tools/fetch.js";
 import { webSearchTool } from "@/tools/search.js";
 import { type ResearcherInput, researcherInputSchema } from "@/types/prompts.js";
 
@@ -24,7 +25,7 @@ const config: ToolEnabledAgentConfig<
     research: "（リサーチスキップ）",
     status: "planning",
   },
-  tools: [webSearchTool as unknown as Tool],
+  tools: [webSearchTool as unknown as Tool, webFetchTool as unknown as Tool],
 };
 
 export const researcherNode = createToolEnabledAgent(config);
