@@ -6,6 +6,44 @@ import { writerNode } from "./agents/writer.js";
 import { editorNode } from "./agents/editor.js";
 import { reviewerNode } from "./agents/reviewer.js";
 
+const max = (state: typeof ArticleState.State) => state.maxRetriesPerAgent ?? 1;
+
+function researcherRouter(
+  state: typeof ArticleState.State
+): "researcher" | "planner" {
+  const retry =
+    state.needRetry &&
+    (state.researcherRetryCount ?? 0) < max(state);
+  return retry ? "researcher" : "planner";
+}
+
+function plannerRouter(
+  state: typeof ArticleState.State
+): "planner" | "writer" {
+  const retry =
+    state.needRetry &&
+    (state.plannerRetryCount ?? 0) < max(state);
+  return retry ? "planner" : "writer";
+}
+
+function writerRouter(
+  state: typeof ArticleState.State
+): "writer" | "editor" {
+  const retry =
+    state.needRetry &&
+    (state.writerRetryCount ?? 0) < max(state);
+  return retry ? "writer" : "editor";
+}
+
+function editorRouter(
+  state: typeof ArticleState.State
+): "editor" | "reviewer" {
+  const retry =
+    state.needRetry &&
+    (state.editorRetryCount ?? 0) < max(state);
+  return retry ? "editor" : "reviewer";
+}
+
 function reviewRouter(
   state: typeof ArticleState.State
 ): "writer" | "__end__" {
@@ -20,10 +58,22 @@ export function buildGraph() {
     .addNode("editor", editorNode)
     .addNode("reviewer", reviewerNode)
     .addEdge(START, "researcher")
-    .addEdge("researcher", "planner")
-    .addEdge("planner", "writer")
-    .addEdge("writer", "editor")
-    .addEdge("editor", "reviewer")
+    .addConditionalEdges("researcher", researcherRouter, {
+      researcher: "researcher",
+      planner: "planner",
+    })
+    .addConditionalEdges("planner", plannerRouter, {
+      planner: "planner",
+      writer: "writer",
+    })
+    .addConditionalEdges("writer", writerRouter, {
+      writer: "writer",
+      editor: "editor",
+    })
+    .addConditionalEdges("editor", editorRouter, {
+      editor: "editor",
+      reviewer: "reviewer",
+    })
     .addConditionalEdges("reviewer", reviewRouter, {
       writer: "writer",
       __end__: END,

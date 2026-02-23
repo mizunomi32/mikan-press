@@ -19,4 +19,11 @@ export const ArticleState = Annotation.Root({
     | "reviewing"
     | "done"
   >,
+  // 各エージェントの自己ループ用
+  needRetry: Annotation<boolean>,
+  maxRetriesPerAgent: Annotation<number>,
+  researcherRetryCount: Annotation<number>,
+  plannerRetryCount: Annotation<number>,
+  writerRetryCount: Annotation<number>,
+  editorRetryCount: Annotation<number>,
 });

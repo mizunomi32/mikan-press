@@ -6,23 +6,25 @@ LangChain.js + LangGraph.js による記事執筆AIエージェント。
 
 ## ワークフロー
 
+各エージェントは出力末尾で **PROCEED**（次へ）または **RETRY**（自分でやり直し）を選べます。Retry は `--max-retries-per-agent` で上限を指定できます。
+
 ```
-START → Researcher → Planner → Writer → Editor → Reviewer
-                                  ↑                  ↓
-                                  └── REVISE ─────────┘
-                                                     ↓
-                                              APPROVE → END
+START → Researcher ⇄ Planner ⇄ Writer ⇄ Editor ⇄ Reviewer
+         (RETRY)    (RETRY)    (RETRY)   (RETRY)      ↓
+                                                      ├── APPROVE → END
+                                                      └── REVISE → Writer → ...
 ```
+
+- **Researcher / Planner / Writer / Editor**: 自己ループ（RETRY で自分に戻る）
+- **Reviewer**: 承認（APPROVE）で終了、差し戻し（REVISE）で Writer に戻る（`--max-reviews` で上限）
 
 | エージェント | 役割 |
 |---|---|
-| Researcher | トピックに関する情報を調査・整理 |
-| Planner | リサーチ結果をもとにアウトラインを作成 |
-| Writer | アウトラインに沿って記事を執筆 |
-| Editor | 文法・表記の校正、文章の改善 |
-| Reviewer | 品質レビュー、差し戻し判定（APPROVE / REVISE） |
-
-Reviewer が REVISE と判定した場合、Writer に差し戻されます（最大回数まで）。
+| Researcher | トピックに関する情報を調査・整理。末尾で PROCEED / RETRY |
+| Planner | リサーチ結果をもとにアウトラインを作成。末尾で PROCEED / RETRY |
+| Writer | アウトラインに沿って記事を執筆。末尾で PROCEED / RETRY |
+| Editor | 文法・表記の校正、文章の改善。末尾で PROCEED / RETRY |
+| Reviewer | 品質レビュー。APPROVE で終了、REVISE で Writer に差し戻し（最大回数は `--max-reviews`） |
 
 ## セットアップ
 
@@ -47,6 +49,9 @@ bun run dev -- generate --topic "AIの未来" -o output.md
 # 最大レビュー回数を指定（デフォルト: 3）
 bun run dev -- generate --topic "AIの未来" --max-reviews 5
 
+# 各エージェントの最大やり直し回数を指定（デフォルト: 1）
+bun run dev -- generate --topic "AIの未来" --max-retries-per-agent 2
+
 # リサーチをスキップ
 bun run dev -- generate --topic "AIの未来" --skip-research
 ```
@@ -56,7 +61,8 @@ bun run dev -- generate --topic "AIの未来" --skip-research
 | オプション | 短縮形 | 説明 | デフォルト |
 |---|---|---|---|
 | `--topic` | `-t` | 記事のトピック（必須） | - |
-| `--max-reviews` | `-r` | 最大レビュー回数 | 3 |
+| `--max-reviews` | `-r` | Reviewer の最大差し戻し回数 | 3 |
+| `--max-retries-per-agent` | - | 各エージェントの最大 RETRY 回数 | 1 |
 | `--skip-research` | - | リサーチフェーズをスキップ | false |
 | `--output` | `-o` | 出力ファイルパス | stdout |
 
