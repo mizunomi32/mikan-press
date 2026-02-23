@@ -44,13 +44,18 @@ export class SupervisorAgent {
     const editorAgent = new EditorAgent(language);
 
     // 1. Research
-    state.research = await this.executeWithReview(
-      'research',
-      state,
-      (feedback) => researchAgent.run(topic, feedback),
-      (result) => JSON.stringify(result, null, 2),
-      maxRetries
-    );
+    if (process.env.SKIP_RESEARCH === 'true') {
+      console.log('[SupervisorAgent] SKIP_RESEARCH=true: リサーチをスキップします');
+      state.research = { topic, summary: topic, keyPoints: [], sources: [] };
+    } else {
+      state.research = await this.executeWithReview(
+        'research',
+        state,
+        (feedback) => researchAgent.run(topic, feedback),
+        (result) => JSON.stringify(result, null, 2),
+        maxRetries
+      );
+    }
 
     // 2. Plan
     state.plan = await this.executeWithReview(

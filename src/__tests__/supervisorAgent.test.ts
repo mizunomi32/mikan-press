@@ -190,6 +190,47 @@ describe('SupervisorAgent', () => {
     expect(mockReview.review).toHaveBeenCalledTimes(4);
   });
 
+  test('SKIP_RESEARCH=true でリサーチをスキップする', async () => {
+    const originalEnv = process.env.SKIP_RESEARCH;
+    process.env.SKIP_RESEARCH = 'true';
+
+    try {
+      // ResearchAgent の chat() 呼び出しはスキップされる
+      // PlanAgent
+      mockChat.mockResolvedValueOnce(JSON.stringify(planJson));
+      // WriterAgent: intro + 1 section + conclusion = 3 calls
+      mockChat
+        .mockResolvedValueOnce('導入文の内容')
+        .mockResolvedValueOnce('メインセクションの内容')
+        .mockResolvedValueOnce('まとめの内容');
+      // EditorAgent
+      mockChat.mockResolvedValueOnce('# テスト記事\n\nスキップ記事');
+
+      // research のレビューは不要なので 3 回（plan, write, edit）
+      const mockReview = createMockReviewAgent([
+        approveResult,
+        approveResult,
+        approveResult,
+      ]);
+
+      const agent = new SupervisorAgent({ topic: 'テスト' }, mockReview);
+      const article = await agent.run();
+
+      expect(article.title).toBe('テスト記事');
+      expect(article.content).toBe('# テスト記事\n\nスキップ記事');
+      // chat() は plan(1) + writer(3) + editor(1) = 5 回（research の 1 回がない）
+      expect(mockChat).toHaveBeenCalledTimes(5);
+      // ReviewAgent は 3 回（research のレビューなし）
+      expect(mockReview.review).toHaveBeenCalledTimes(3);
+    } finally {
+      if (originalEnv === undefined) {
+        delete process.env.SKIP_RESEARCH;
+      } else {
+        process.env.SKIP_RESEARCH = originalEnv;
+      }
+    }
+  });
+
   test('デフォルト設定が正しく適用される', async () => {
     setupFullPipelineMocks();
 

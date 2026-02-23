@@ -22,8 +22,14 @@ export class ArticleAgent {
     console.log(`トピック: ${topic}\n`);
 
     // 1. Research (Gemini 2.5 Flash Lite)
-    const researchAgent = new ResearchAgent(language);
-    const research = await researchAgent.run(topic);
+    let research;
+    if (process.env.SKIP_RESEARCH === 'true') {
+      console.log('[ArticleAgent] SKIP_RESEARCH=true: リサーチをスキップします');
+      research = { topic, summary: topic, keyPoints: [], sources: [] };
+    } else {
+      const researchAgent = new ResearchAgent(language);
+      research = await researchAgent.run(topic);
+    }
 
     // 2. Plan (GLM)
     const planAgent = new PlanAgent(language);
