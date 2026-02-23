@@ -8,13 +8,13 @@ const DEFAULT_SPEC = 'google/gemini-2.5-flash-lite';
 export class ResearchAgent {
   private modelSpec: string;
 
-  constructor(private language: string = 'ja') {
+  constructor(private language: string = 'ja', private skillsText: string = '') {
     this.modelSpec = resolveModel('RESEARCH_MODEL', DEFAULT_SPEC);
   }
 
   async run(topic: string, feedback?: string): Promise<ResearchResult> {
     logger.info('[ResearchAgent] リサーチを開始します...');
-    let prompt = buildResearchPrompt(topic, this.language);
+    let prompt = buildResearchPrompt(topic, this.language, this.skillsText);
     if (feedback) {
       prompt += `\n\n## 前回のレビューフィードバック\n以下の点を改善してください:\n${feedback}`;
     }

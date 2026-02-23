@@ -11,13 +11,13 @@ function defaultSpec(): string {
 export class PlanAgent {
   private modelSpec: string;
 
-  constructor(private language: string = 'ja') {
+  constructor(private language: string = 'ja', private skillsText: string = '') {
     this.modelSpec = resolveModel('PLAN_MODEL', defaultSpec());
   }
 
   async run(research: ResearchResult, feedback?: string): Promise<ArticlePlan> {
     logger.info('[PlanAgent] 記事構成を生成します...');
-    let prompt = buildPlanPrompt(research, this.language);
+    let prompt = buildPlanPrompt(research, this.language, this.skillsText);
     if (feedback) {
       prompt += `\n\n## 前回のレビューフィードバック\n以下の点を改善してください:\n${feedback}`;
     }

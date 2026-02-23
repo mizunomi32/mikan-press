@@ -76,3 +76,47 @@ bun dev --topic "トピック名"  # 開発モードで記事生成
 - `MAX_ARTICLE_LENGTH` — 最大文字数目安
 - `SKIP_RESEARCH` — `true` で ResearchAgent をスキップ（GOOGLE_API_KEY 不要になる）
 - `LOG_LEVEL` — ログレベル（`debug` / `info` / `warn` / `error` / `silent`、デフォルト: `info`）
+
+## スキル機能
+
+各エージェントに対して独立したスキルを設定できる機能。`skills/` ディレクトリに `.skill.md` ファイルを配置することで、執筆スタイルやドメイン知識などをプロンプトに自動注入できます。
+
+### SKILL.md フォーマット
+
+```markdown
+---
+name: writing-style
+description: 記事の文体・トーンを指定するスキル
+agents:
+  - writer
+  - editor
+---
+
+## 文体ガイドライン
+
+- 「です・ます」調で統一する
+- 専門用語には初出時に簡単な説明を括弧書きで添える
+```
+
+- `name` (string, 必須): スキル識別子
+- `description` (string, 必須): スキルの説明
+- `agents` (string[], 必須): 適用対象。`research` / `plan` / `writer` / `editor` / `review`
+
+### ディレクトリ構成
+
+```
+skills/                          # プロジェクトルート
+  writing-style.skill.md         # 例: 文体指定
+  tech-domain.skill.md           # 例: 技術ドメイン知識
+src/skills/
+  loader.ts                      # スキルローダー
+  index.ts                       # バレルファイル
+```
+
+### 使い方
+
+1. `skills/` ディレクトリに `.skill.md` ファイルを作成
+2. ファイル名は `xxx.skill.md` の形式（`xxx` は任意の名前）
+3. 記事生成時に自動的に読み込まれ、該当エージェントのプロンプトに注入される
+
+サンプルスキル: `skills/example-style.skill.md`

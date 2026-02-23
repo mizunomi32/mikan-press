@@ -11,13 +11,13 @@ function defaultSpec(): string {
 export class ReviewAgent {
   private modelSpec: string;
 
-  constructor(private language: string = 'ja') {
+  constructor(private language: string = 'ja', private skillsText: string = '') {
     this.modelSpec = resolveModel('REVIEW_MODEL', defaultSpec());
   }
 
   async review(stage: WorkflowStage, content: string): Promise<ReviewResult> {
     logger.info(`[ReviewAgent] ${stage} ステージをレビュー中...`);
-    const prompt = buildReviewPrompt(stage, content, this.language);
+    const prompt = buildReviewPrompt(stage, content, this.language, this.skillsText);
     const { content: raw } = await chat(this.modelSpec, [{ role: 'user', content: prompt }], {
       temperature: 0.3,
     });

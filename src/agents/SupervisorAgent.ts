@@ -4,17 +4,21 @@ import { WriterAgent } from './WriterAgent';
 import { EditorAgent } from './EditorAgent';
 import { ReviewAgent } from './ReviewAgent';
 import { logger } from '../logger';
+import { loadSkills, getSkillsForAgent, formatSkillsForPrompt } from '../skills';
 import type {
   Article,
   SupervisorConfig,
   WorkflowStage,
   WorkflowState,
   ReviewResult,
+  Skill,
+  AgentName,
 } from '../types/index';
 
 export class SupervisorAgent {
   private config: Required<SupervisorConfig>;
   private reviewAgent: ReviewAgent;
+  private skills: Skill[] = [];
 
   constructor(config: SupervisorConfig, reviewAgent?: ReviewAgent) {
     this.config = {
@@ -24,11 +28,29 @@ export class SupervisorAgent {
       maxRetries: 2,
       ...config,
     };
-    this.reviewAgent = reviewAgent ?? new ReviewAgent(this.config.language);
+    this.reviewAgent = reviewAgent ?? new ReviewAgent(this.config.language, '');
+  }
+
+  private getSkillsText(agentName: AgentName): string {
+    const agentSkills = getSkillsForAgent(this.skills, agentName);
+    return formatSkillsForPrompt(agentSkills);
   }
 
   async run(): Promise<Article> {
     const { topic, language, maxRetries } = this.config;
+
+    // Load skills
+    this.skills = await loadSkills('skills');
+    if (this.skills.length > 0) {
+      logger.info(`[SupervisorAgent] ${this.skills.length}個のスキルを読み込みました`);
+      for (const skill of this.skills) {
+        logger.debug(`  - ${skill.name}: ${skill.description} (${skill.agents.join(', ')})`);
+      }
+    }
+
+    // Update review agent with skills
+    this.reviewAgent = new ReviewAgent(this.config.language, this.getSkillsText('review'));
+
     logger.always(`\n=== mikan-press: 記事生成開始 (SupervisorAgent) ===`);
     logger.always(`トピック: ${topic}`);
     logger.always(`最大リトライ: ${maxRetries}\n`);
@@ -39,10 +61,10 @@ export class SupervisorAgent {
       reviewHistory: [],
     };
 
-    const researchAgent = new ResearchAgent(language);
-    const planAgent = new PlanAgent(language);
-    const writerAgent = new WriterAgent(language);
-    const editorAgent = new EditorAgent(language);
+    const researchAgent = new ResearchAgent(language, this.getSkillsText('research'));
+    const planAgent = new PlanAgent(language, this.getSkillsText('plan'));
+    const writerAgent = new WriterAgent(language, this.getSkillsText('writer'));
+    const editorAgent = new EditorAgent(language, this.getSkillsText('editor'));
 
     // 1. Research
     if (process.env.SKIP_RESEARCH === 'true') {

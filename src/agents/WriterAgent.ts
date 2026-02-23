@@ -15,7 +15,7 @@ function defaultSpec(): string {
 export class WriterAgent {
   private modelSpec: string;
 
-  constructor(private language: string = 'ja') {
+  constructor(private language: string = 'ja', private skillsText: string = '') {
     this.modelSpec = resolveModel('WRITER_MODEL', defaultSpec());
   }
 
@@ -32,7 +32,7 @@ export class WriterAgent {
 
     // Introduction
     const { content: introContent } = await chat(this.modelSpec, [
-      { role: 'user', content: buildIntroPrompt(plan, research, this.language) + feedbackSuffix },
+      { role: 'user', content: buildIntroPrompt(plan, research, this.language, this.skillsText) + feedbackSuffix },
     ]);
     sections.push({ title: '__intro', content: introContent.trim() });
     logger.info('[WriterAgent] 導入部 完了');
@@ -46,7 +46,8 @@ export class WriterAgent {
             section.title,
             section.description,
             research,
-            this.language
+            this.language,
+            this.skillsText
           ),
         },
       ]);
@@ -56,7 +57,7 @@ export class WriterAgent {
 
     // Conclusion
     const { content: conclusionContent } = await chat(this.modelSpec, [
-      { role: 'user', content: buildConclusionPrompt(plan, this.language) },
+      { role: 'user', content: buildConclusionPrompt(plan, this.language, this.skillsText) },
     ]);
     sections.push({ title: '__conclusion', content: conclusionContent.trim() });
     logger.info('[WriterAgent] まとめ 完了');

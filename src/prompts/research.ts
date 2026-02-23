@@ -1,6 +1,8 @@
-export function buildResearchPrompt(topic: string, language: string): string {
-  return `あなたは優秀なリサーチャーです。以下のトピックについて包括的なリサーチを行ってください。
+export function buildResearchPrompt(topic: string, language: string, skillsText?: string): string {
+  const skillsSection = skillsText ? `\n\n${skillsText}\n\n` : '';
 
+  return `あなたは優秀なリサーチャーです。以下のトピックについて包括的なリサーチを行ってください。
+${skillsSection}
 トピック: ${topic}
 出力言語: ${language === 'ja' ? '日本語' : 'English'}
 

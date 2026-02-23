@@ -14,6 +14,16 @@ mock.module('../clients/chat', () => ({
   resolveModel: (envVar: string, defaultSpec: string) => defaultSpec,
 }));
 
+// ---------- mock loadSkills() ----------
+
+const mockLoadSkills = mock(() => Promise.resolve([]));
+
+mock.module('../skills', () => ({
+  loadSkills: mockLoadSkills,
+  getSkillsForAgent: (skills: any[], agentName: string) => [],
+  formatSkillsForPrompt: (skills: any[]) => '',
+}));
+
 const { SupervisorAgent } = await import('../agents/SupervisorAgent');
 const { ReviewAgent } = await import('../agents/ReviewAgent');
 
@@ -31,6 +41,17 @@ const planJson: ArticlePlan = {
   introduction: '導入の方向性',
   sections: [{ title: 'メインセクション', description: '内容の説明' }],
   conclusion: 'まとめの方向性',
+};
+
+const planJsonFallback: ArticlePlan = {
+  title: 'テスト',
+  introduction: '',
+  sections: [
+    { title: '概要', description: 'テスト' },
+    { title: '詳細', description: 'テスト' },
+    { title: '応用', description: 'テスト' },
+  ],
+  conclusion: 'まとめ',
 };
 
 const approveResult: ReviewResult = {
@@ -74,11 +95,18 @@ function setupFullPipelineMocks() {
   mockChat.mockResolvedValueOnce(chatResult('# テスト記事\n\n最終的な記事本文'));
 }
 
+function setupFullPipelineSkillsMock() {
+  // loadSkills モック
+  mockLoadSkills.mockResolvedValue([]);
+}
+
 // ---------- SupervisorAgent ----------
 
 describe('SupervisorAgent', () => {
   beforeEach(() => {
     mockChat.mockReset();
+    mockLoadSkills.mockReset();
+    setupFullPipelineSkillsMock();
   });
 
   test('全ステージ approve で正常に Article を返す', async () => {

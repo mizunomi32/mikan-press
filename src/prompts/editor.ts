@@ -1,6 +1,8 @@
 import type { Article } from '../types/index';
 
-export function buildEditorPrompt(article: Article, language: string): string {
+export function buildEditorPrompt(article: Article, language: string, skillsText?: string): string {
+  const skillsSection = skillsText ? `\n\n${skillsText}\n\n` : '';
+
   const fullText = [
     `# ${article.title}`,
     '',
@@ -13,6 +15,7 @@ export function buildEditorPrompt(article: Article, language: string): string {
   ].join('\n');
 
   return `あなたはプロの編集者です。以下の記事を校正・改善してください。
+${skillsSection}
 
 出力言語: ${language === 'ja' ? '日本語' : 'English'}
 

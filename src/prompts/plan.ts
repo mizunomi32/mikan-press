@@ -1,8 +1,10 @@
 import type { ResearchResult } from '../types/index';
 
-export function buildPlanPrompt(research: ResearchResult, language: string): string {
-  return `あなたは記事構成のエキスパートです。以下のリサーチ結果を元に、読みやすい記事のアウトラインを作成してください。
+export function buildPlanPrompt(research: ResearchResult, language: string, skillsText?: string): string {
+  const skillsSection = skillsText ? `\n\n${skillsText}\n\n` : '';
 
+  return `あなたは記事構成のエキスパートです。以下のリサーチ結果を元に、読みやすい記事のアウトラインを作成してください。
+${skillsSection}
 ## リサーチ結果
 トピック: ${research.topic}
 概要: ${research.summary}

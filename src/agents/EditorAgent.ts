@@ -11,13 +11,13 @@ function defaultSpec(): string {
 export class EditorAgent {
   private modelSpec: string;
 
-  constructor(private language: string = 'ja') {
+  constructor(private language: string = 'ja', private skillsText: string = '') {
     this.modelSpec = resolveModel('EDITOR_MODEL', defaultSpec());
   }
 
   async run(article: Article, feedback?: string): Promise<string> {
     logger.info('[EditorAgent] 校正を開始します...');
-    let prompt = buildEditorPrompt(article, this.language);
+    let prompt = buildEditorPrompt(article, this.language, this.skillsText);
     if (feedback) {
       prompt += `\n\n## 前回のレビューフィードバック\n以下の点を改善してください:\n${feedback}`;
     }

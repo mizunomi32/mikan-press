@@ -3,6 +3,15 @@ export interface ChatMessage {
   content: string;
 }
 
+export type AgentName = 'research' | 'plan' | 'writer' | 'editor' | 'review';
+
+export interface Skill {
+  name: string;
+  description: string;
+  agents: AgentName[];
+  content: string;
+}
+
 export type Provider = 'google' | 'zhipu' | 'openai' | 'openrouter';
 
 export interface ModelSpec {
@@ -79,4 +88,35 @@ export interface WorkflowState {
 
 export interface SupervisorConfig extends ArticleConfig {
   maxRetries?: number;
+}
+
+// Thinking loop related types
+export interface Thought {
+  iteration: number;
+  content: string;
+  skillInvoked?: string;      // 呼び出されたスキル名
+  toolInvoked?: string;       // 将来のツール対応
+  timestamp: string;
+}
+
+export interface SkillInvocation {
+  skillName: string;
+  args?: Record<string, unknown>;
+}
+
+export interface ToolInvocation {
+  toolName: string;
+  params: Record<string, unknown>;
+}
+
+export interface ThinkingConfig {
+  maxIterations?: number;
+  enableSkills?: boolean;
+  enableTools?: boolean;
+  skills?: Skill[];
+}
+
+export interface ThinkingResult {
+  result: string;
+  thoughts: Thought[];
 }

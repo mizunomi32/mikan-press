@@ -3,9 +3,13 @@ import type { ArticlePlan, ResearchResult } from '../types/index';
 export function buildIntroPrompt(
   plan: ArticlePlan,
   research: ResearchResult,
-  language: string
+  language: string,
+  skillsText?: string
 ): string {
+  const skillsSection = skillsText ? `\n\n${skillsText}\n\n` : '';
+
   return `あなたはプロの記事ライターです。以下の情報を元に記事の導入部を執筆してください。
+${skillsSection}
 
 タイトル: ${plan.title}
 導入の方向性: ${plan.introduction}
@@ -19,9 +23,13 @@ export function buildSectionPrompt(
   sectionTitle: string,
   sectionDescription: string,
   research: ResearchResult,
-  language: string
+  language: string,
+  skillsText?: string
 ): string {
+  const skillsSection = skillsText ? `\n\n${skillsText}\n\n` : '';
+
   return `あなたはプロの記事ライターです。以下のセクションを執筆してください。
+${skillsSection}
 
 セクションタイトル: ${sectionTitle}
 内容の方向性: ${sectionDescription}
@@ -34,9 +42,13 @@ ${research.keyPoints.map((p) => `- ${p}`).join('\n')}
 
 export function buildConclusionPrompt(
   plan: ArticlePlan,
-  language: string
+  language: string,
+  skillsText?: string
 ): string {
+  const skillsSection = skillsText ? `\n\n${skillsText}\n\n` : '';
+
   return `あなたはプロの記事ライターです。以下の記事のまとめを執筆してください。
+${skillsSection}
 
 記事タイトル: ${plan.title}
 まとめの方向性: ${plan.conclusion}

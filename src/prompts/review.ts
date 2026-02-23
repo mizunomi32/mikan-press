@@ -22,10 +22,14 @@ const stageCriteria: Record<WorkflowStage, string> = {
 export function buildReviewPrompt(
   stage: WorkflowStage,
   content: string,
-  language: string
+  language: string,
+  skillsText?: string
 ): string {
   const lang = language === 'ja' ? '日本語' : 'English';
+  const skillsSection = skillsText ? `\n\n${skillsText}\n\n` : '';
+
   return `あなたは記事品質のレビュアーです。以下の「${stage}」ステージの成果物を評価してください。
+${skillsSection}
 
 ## 評価基準
 ${stageCriteria[stage]}
