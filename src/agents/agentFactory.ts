@@ -8,11 +8,11 @@
 
 import type { AIMessage } from "@langchain/core/messages";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
-import { type AgentRole, createModel } from "../config.js";
-import { logger } from "../logger.js";
-import { withSpinner } from "../spinner.js";
-import type { ArticleState } from "../state.js";
-import { logTokenUsage } from "../tokenUsage.js";
+import { type AgentRole, createModel } from "@/config.js";
+import { logger } from "@/logger.js";
+import { withSpinner } from "@/spinner.js";
+import type { ArticleState } from "@/state.js";
+import { logTokenUsage } from "@/tokenUsage.js";
 
 // ============================================================================
 // 型定義

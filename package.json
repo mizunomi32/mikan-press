@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "LangChain.js + LangGraph.js による記事執筆AIエージェント",
   "type": "module",
+  "imports": {
+    "@/*": "./src/*"
+  },
   "scripts": {
     "dev": "bun run src/index.ts",
     "build": "tsc",

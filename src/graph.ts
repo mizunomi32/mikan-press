@@ -1,10 +1,10 @@
 import { END, START, StateGraph } from "@langchain/langgraph";
-import { editorNode } from "./agents/editor.js";
-import { plannerNode } from "./agents/planner.js";
-import { researcherNode } from "./agents/researcher.js";
-import { reviewerNode } from "./agents/reviewer.js";
-import { writerNode } from "./agents/writer.js";
-import { ArticleState } from "./state.js";
+import { editorNode } from "@/agents/editor.js";
+import { plannerNode } from "@/agents/planner.js";
+import { researcherNode } from "@/agents/researcher.js";
+import { reviewerNode } from "@/agents/reviewer.js";
+import { writerNode } from "@/agents/writer.js";
+import { ArticleState } from "@/state.js";
 
 const max = (state: typeof ArticleState.State) => state.maxRetriesPerAgent ?? 1;
 

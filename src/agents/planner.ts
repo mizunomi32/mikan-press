@@ -1,5 +1,5 @@
-import { PLANNER_HUMAN, PLANNER_SYSTEM } from "../prompts/planner.js";
-import { type AgentConfig, createStandardAgent } from "./agentFactory.js";
+import { PLANNER_HUMAN, PLANNER_SYSTEM } from "@/prompts/planner.js";
+import { type AgentConfig, createStandardAgent } from "@/agents/agentFactory.js";
 
 type PlannerInput = { topic: string; research: string };
 

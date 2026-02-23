@@ -1,5 +1,5 @@
-import { RESEARCHER_HUMAN, RESEARCHER_SYSTEM } from "../prompts/researcher.js";
-import { type AgentConfig, createStandardAgent } from "./agentFactory.js";
+import { RESEARCHER_HUMAN, RESEARCHER_SYSTEM } from "@/prompts/researcher.js";
+import { type AgentConfig, createStandardAgent } from "@/agents/agentFactory.js";
 
 type ResearcherInput = { topic: string };
 

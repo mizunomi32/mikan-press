@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { Command } from "commander";
-import { buildGraph } from "./graph.js";
-import { logger } from "./logger.js";
+import { buildGraph } from "@/graph.js";
+import { logger } from "@/logger.js";
 
 const program = new Command();
 

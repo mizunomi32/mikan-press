@@ -2,7 +2,7 @@ import "dotenv/config";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { ChatOpenAI } from "@langchain/openai";
-import { logger } from "./logger.js";
+import { logger } from "@/logger.js";
 
 export type AgentRole = "researcher" | "planner" | "writer" | "editor" | "reviewer";
 

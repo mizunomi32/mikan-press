@@ -1,5 +1,5 @@
-import { WRITER_HUMAN, WRITER_REVISION_HUMAN, WRITER_SYSTEM } from "../prompts/writer.js";
-import { type AgentConfig, createStandardAgent, type RevisionConfig } from "./agentFactory.js";
+import { WRITER_HUMAN, WRITER_REVISION_HUMAN, WRITER_SYSTEM } from "@/prompts/writer.js";
+import { type AgentConfig, createStandardAgent, type RevisionConfig } from "@/agents/agentFactory.js";
 
 type WriterInput = {
   topic: string;

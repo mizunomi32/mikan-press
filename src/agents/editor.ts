@@ -1,5 +1,5 @@
-import { EDITOR_HUMAN, EDITOR_SYSTEM } from "../prompts/editor.js";
-import { type AgentConfig, createStandardAgent } from "./agentFactory.js";
+import { EDITOR_HUMAN, EDITOR_SYSTEM } from "@/prompts/editor.js";
+import { type AgentConfig, createStandardAgent } from "@/agents/agentFactory.js";
 
 type EditorInput = { draft: string };
 
