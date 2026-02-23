@@ -140,7 +140,7 @@ describe("Logger", () => {
   });
 
   describe("ログ出力のフォーマット", () => {
-    test("errorメッセージに[ERROR]プレフィックス", () => {
+    test("errorメッセージに[ERROR]プレフィックスとタイムスタンプ", () => {
       process.env.LOG_LEVEL = "error";
       clearEnvCache();
       const logger = new Logger();
@@ -149,7 +149,8 @@ describe("Logger", () => {
       logger.error("test error");
 
       expect(capturedLogs.length).toBe(1);
-      expect(capturedLogs[0].args[0]).toBe("[ERROR]");
+      // 新しいフォーマット: [timestamp] [ERROR] message
+      expect(capturedLogs[0].args[0]).toMatch(/\[.*\] \[ERROR\] test error/);
 
       restoreConsole();
       delete process.env.LOG_LEVEL;
@@ -165,6 +166,7 @@ describe("Logger", () => {
 
       expect(capturedLogs.length).toBe(1);
       expect(capturedLogs[0].args[0]).toBe("[WARN]");
+      expect(capturedLogs[0].args[1]).toBe("test warning");
 
       restoreConsole();
       delete process.env.LOG_LEVEL;
@@ -180,6 +182,7 @@ describe("Logger", () => {
 
       expect(capturedLogs.length).toBe(1);
       expect(capturedLogs[0].args[0]).toBe("[INFO]");
+      expect(capturedLogs[0].args[1]).toBe("test info");
 
       restoreConsole();
     });
@@ -194,6 +197,7 @@ describe("Logger", () => {
 
       expect(capturedLogs.length).toBe(1);
       expect(capturedLogs[0].args[0]).toBe("[DEBUG]");
+      expect(capturedLogs[0].args[1]).toBe("test debug");
 
       restoreConsole();
       delete process.env.LOG_LEVEL;
