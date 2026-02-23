@@ -8,7 +8,7 @@ const LEVEL_PRIORITY: Record<LogLevel, number> = {
   debug: 3,
 };
 
-class Logger {
+export class Logger {
   private level: LogLevel;
 
   constructor() {

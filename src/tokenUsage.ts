@@ -9,7 +9,7 @@ type UsageLike = {
 };
 
 // LangChain の invoke 結果（AIMessage 等）から usage を取るため any で受け付ける
-function getUsage(result: {
+export function getUsage(result: {
   usage_metadata?: UsageLike;
   response_metadata?: Record<string, unknown>;
 }): { input: number; output: number; total: number } | null {
