@@ -1,228 +1,118 @@
 # mikan-press
 
-記事執筆AIエージェント — TypeScript製。SupervisorAgent がサブエージェントを順次実行し、ReviewAgent によるレビューループで品質を担保します。モデルは環境変数で `provider/model` 形式で指定可能（Google / Zhipu / OpenAI / OpenRouter 対応）。
+LangChain.js + LangGraph.js による記事執筆AIエージェント。
 
-## アーキテクチャ概要
+複数のAIエージェントが協調して、リサーチからレビューまでの記事執筆プロセスを自動化します。
+
+## ワークフロー
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     SupervisorAgent                              │
-│                                                                  │
-│  1. ResearchAgent (デフォルト: Gemini 2.5 Flash Lite)             │
-│     └── トピックのリサーチ・情報収集                             │
-│                                                                  │
-│  2. PlanAgent (デフォルト: Zhipu GLM-4 Flash)                     │
-│     └── 記事構成・アウトライン生成                               │
-│                                                                  │
-│  3. WriterAgent (デフォルト: Zhipu GLM-4 Flash)                   │
-│     └── 各セクションの逐次執筆                                   │
-│                                                                  │
-│  4. EditorAgent (デフォルト: Zhipu GLM-4 Flash)                   │
-│     └── 校正・スタイル統一                                       │
-│                                                                  │
-│  5. ReviewAgent (デフォルト: Zhipu GLM-4 Flash)                   │
-│     └── 各ステージ出力の品質レビュー・差し戻し（最大 N 回）       │
-└─────────────────────────────────────────────────────────────────┘
+START → Researcher → Planner → Writer → Editor → Reviewer
+                                  ↑                  ↓
+                                  └── REVISE ─────────┘
+                                                     ↓
+                                              APPROVE → END
 ```
 
-全エージェントは統一 `chat()` 経由でプロバイダーを呼び出し、`*_MODEL` 環境変数でモデルを切り替えられます。
+| エージェント | 役割 |
+|---|---|
+| Researcher | トピックに関する情報を調査・整理 |
+| Planner | リサーチ結果をもとにアウトラインを作成 |
+| Writer | アウトラインに沿って記事を執筆 |
+| Editor | 文法・表記の校正、文章の改善 |
+| Reviewer | 品質レビュー、差し戻し判定（APPROVE / REVISE） |
 
-## 技術スタック・デフォルトモデル
-
-| 役割 | 環境変数 | デフォルト | 用途 |
-|------|----------|------------|------|
-| リサーチ | `RESEARCH_MODEL` | `google/gemini-2.5-flash-lite` | 情報収集・キーワード抽出 |
-| プランニング | `PLAN_MODEL` | `zhipu/glm-4-flash` | アウトライン・構成設計 |
-| 執筆 | `WRITER_MODEL` | `zhipu/glm-4-flash` | セクション逐次執筆 |
-| 編集 | `EDITOR_MODEL` | `zhipu/glm-4-flash` | 校正・スタイル統一 |
-| レビュー | `REVIEW_MODEL` | `zhipu/glm-4-flash` | 品質レビュー・差し戻し |
-
-**対応プロバイダー:** `google`, `zhipu`, `openai`, `openrouter`
-
-## 必要条件
-
-- [Bun](https://bun.sh) >= 1.0
-- Zhipu AI APIキー（デフォルトの執筆・編集・レビュー用）
-- Google AI APIキー（デフォルトのリサーチ用）  
-  ※ OpenAI / OpenRouter のみ使う場合はそれぞれのAPIキー
+Reviewer が REVISE と判定した場合、Writer に差し戻されます（最大回数まで）。
 
 ## セットアップ
 
 ```bash
-git clone <repo-url>
-cd mikan-press
-
+# 依存パッケージのインストール
 bun install
 
+# 環境変数の設定
 cp .env.example .env
-# .env を編集してAPIキーと必要に応じてモデルを設定
-```
-
-### 環境変数
-
-`.env` に以下を設定します。
-
-**プロバイダー接続（必須なものだけ設定）**
-
-```env
-# Zhipu AI — デフォルトの執筆・編集・レビューに使用
-# https://open.bigmodel.cn/ で取得
-ZHIPU_API_KEY=your_zhipu_api_key_here
-
-# Google AI — デフォルトのリサーチに使用
-# https://aistudio.google.com/ で取得
-GOOGLE_API_KEY=your_google_api_key_here
-```
-
-**オプション: プロバイダー追加**
-
-```env
-# OPENAI_API_KEY=...
-# OPENAI_BASE_URL=...   # 省略時は https://api.openai.com/v1
-# OPENROUTER_API_KEY=...
-```
-
-**オプション: エージェントごとのモデル（`provider/model`）**
-
-```env
-# 例: 執筆だけ GPT-4o、編集は Claude
-# WRITER_MODEL=openai/gpt-4o
-# EDITOR_MODEL=openrouter/anthropic/claude-sonnet-4
-# REVIEW_MODEL=google/gemini-2.5-pro
-```
-
-**その他**
-
-```env
-ARTICLE_LANGUAGE=ja          # 出力言語 (ja / en)
-MAX_ARTICLE_LENGTH=6000      # 最大文字数目安
+# .env を編集してAPIキーを設定
 ```
 
 ## 使い方
 
-### CLI（SupervisorAgent + レビューループ）
+```bash
+# 記事を生成
+bun run dev -- generate --topic "AIの未来"
+
+# ファイルに出力
+bun run dev -- generate --topic "AIの未来" -o output.md
+
+# 最大レビュー回数を指定（デフォルト: 3）
+bun run dev -- generate --topic "AIの未来" --max-reviews 5
+
+# リサーチをスキップ
+bun run dev -- generate --topic "AIの未来" --skip-research
+```
+
+### CLI オプション
+
+| オプション | 短縮形 | 説明 | デフォルト |
+|---|---|---|---|
+| `--topic` | `-t` | 記事のトピック（必須） | - |
+| `--max-reviews` | `-r` | 最大レビュー回数 | 3 |
+| `--skip-research` | - | リサーチフェーズをスキップ | false |
+| `--output` | `-o` | 出力ファイルパス | stdout |
+
+## モデル設定
+
+エージェントごとに異なるモデルを指定できます。`.env` で `provider/model` 形式で設定してください。
 
 ```bash
-# 記事を生成（開発モード）
-bun dev --topic "AIがもたらす未来の働き方"
-
-# オプション
-bun dev --topic "TypeScriptの型システム入門" \
-  --length 2000 \
-  --language ja \
-  --output ./articles/output.md \
-  --max-retries 2
+# 対応プロバイダー
+RESEARCHER_MODEL=gemini/gemini-2.5-flash
+PLANNER_MODEL=openai/gpt-4o
+WRITER_MODEL=openrouter/anthropic/claude-3.5-sonnet
+EDITOR_MODEL=glm/glm-4-plus
+REVIEWER_MODEL=openai/gpt-4o
 ```
 
-### ビルド後に実行
-
-```bash
-bun run build
-bun start --topic "AIがもたらす未来の働き方"
-```
-
-### プログラムから利用
-
-**SupervisorAgent（レビュー付き・CLIと同じパイプライン）**
-
-```typescript
-import { SupervisorAgent } from './src/agents/SupervisorAgent';
-
-const agent = new SupervisorAgent({
-  topic: 'AIがもたらす未来の働き方',
-  language: 'ja',
-  maxLength: 3000,
-  maxRetries: 2,
-});
-
-const article = await agent.run();
-console.log(article.content);
-```
-
-**ArticleAgent（レビューなしのシンプルパイプライン）**
-
-```typescript
-import { ArticleAgent } from './src/agents/ArticleAgent';
-
-const agent = new ArticleAgent({
-  topic: 'AIがもたらす未来の働き方',
-  language: 'ja',
-  maxLength: 3000,
-});
-
-const article = await agent.run();
-console.log(article.content);
-```
-
-### 開発・品質確認
-
-```bash
-bun test                    # 全テスト
-bun test src/__tests__/prompts.test.ts   # 単一ファイル
-bun run type-check          # 型チェック (tsc --noEmit)
-bun run build               # ビルド (tsc → dist/)
-```
+| プロバイダー | 必要な環境変数 | 例 |
+|---|---|---|
+| `openai` | `OPENAI_API_KEY` | `openai/gpt-4o` |
+| `gemini` | `GOOGLE_API_KEY` | `gemini/gemini-2.5-flash` |
+| `openrouter` | `OPENROUTER_API_KEY` | `openrouter/anthropic/claude-3.5-sonnet` |
+| `glm` | `ZHIPU_API_KEY` | `glm/glm-4-plus` |
 
 ## プロジェクト構成
 
 ```
-mikan-press/
-├── src/
-│   ├── agents/
-│   │   ├── SupervisorAgent.ts   # オーケストレーター（レビューループ管理）
-│   │   ├── ArticleAgent.ts     # レビューなしのシンプルパイプライン
-│   │   ├── ResearchAgent.ts
-│   │   ├── PlanAgent.ts
-│   │   ├── WriterAgent.ts
-│   │   ├── EditorAgent.ts
-│   │   └── ReviewAgent.ts
-│   ├── clients/
-│   │   ├── chat.ts             # 統一チャット (parseModelSpec, chat)
-│   │   ├── model.ts            # モデル解決 (resolveModel 等)
-│   │   ├── gemini.ts
-│   │   ├── glm.ts
-│   │   ├── openai.ts
-│   │   └── openrouter.ts
-│   ├── prompts/
-│   │   ├── research.ts
-│   │   ├── plan.ts
-│   │   ├── writer.ts
-│   │   ├── editor.ts
-│   │   └── review.ts
-│   ├── types/
-│   │   └── index.ts
-│   ├── __tests__/
-│   └── index.ts               # CLI エントリ (commander)
-├── articles/                  # 出力先（オプション）
-├── .env.example
-├── package.json
-├── tsconfig.json
-├── CLAUDE.md
-├── AGENTS.md
-└── README.md
+src/
+├── index.ts              # CLI エントリーポイント
+├── config.ts             # モデル設定・ファクトリ
+├── state.ts              # LangGraph 共有ステート定義
+├── graph.ts              # LangGraph ワークフロー構築
+├── agents/
+│   ├── researcher.ts     # リサーチエージェント
+│   ├── planner.ts        # アウトライン生成エージェント
+│   ├── writer.ts         # 執筆エージェント
+│   ├── editor.ts         # 編集・校正エージェント
+│   └── reviewer.ts       # レビューエージェント
+├── tools/
+│   └── search.ts         # Web検索ツール（将来拡張用）
+└── prompts/
+    ├── researcher.ts
+    ├── planner.ts
+    ├── writer.ts
+    ├── editor.ts
+    └── reviewer.ts
 ```
 
-## エージェントフロー
+## 開発
 
+```bash
+# 型チェック
+bun run type-check
+
+# ビルド
+bun run build
+
+# テスト
+bun test
 ```
-topic 入力
-   │
-   ▼
-ResearchAgent ──► ReviewAgent (NG なら差し戻し、最大 maxRetries 回)
-   │
-   ▼
-PlanAgent ──► ReviewAgent
-   │
-   ▼
-WriterAgent ──► ReviewAgent
-   │
-   ▼
-EditorAgent ──► 最終記事
-   │
-   ▼
-Markdown 出力
-```
-
-## ライセンス
-
-MIT

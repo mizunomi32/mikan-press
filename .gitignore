@@ -1,6 +1,4 @@
 node_modules/
 dist/
 .env
-articles/*.md
 *.log
-.DS_Store

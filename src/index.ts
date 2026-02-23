@@ -1,46 +1,62 @@
-import { program } from 'commander';
-import { writeFileSync, mkdirSync } from 'node:fs';
-import { dirname } from 'node:path';
-import 'dotenv/config';
-import { SupervisorAgent } from './agents/SupervisorAgent';
-import { logger } from './logger';
+import { Command } from "commander";
+import { buildGraph } from "./graph.js";
+import { logger } from "./logger.js";
+import { writeFileSync } from "node:fs";
+
+const program = new Command();
 
 program
-  .name('mikan-press')
-  .description('記事執筆AIエージェント — GLM-5 + Gemini 2.5 Flash Lite')
-  .version('0.1.0');
+  .name("mikan-press")
+  .description("LangChain.js + LangGraph.js による記事執筆AIエージェント")
+  .version("0.1.0");
 
 program
-  .requiredOption('-t, --topic <topic>', '記事のトピック')
-  .option('-l, --language <lang>', '出力言語 (ja / en)', 'ja')
-  .option('-n, --length <number>', '目標文字数', '3000')
-  .option('-o, --output <path>', '出力ファイルパス (省略時は標準出力)')
-  .option('--max-retries <number>', 'レビュー差し戻し最大回数', '2');
+  .command("generate")
+  .description("記事を生成する")
+  .requiredOption("-t, --topic <topic>", "記事のトピック")
+  .option("-r, --max-reviews <number>", "最大レビュー回数", "3")
+  .option("--skip-research", "リサーチフェーズをスキップ")
+  .option("-o, --output <path>", "出力ファイルパス")
+  .action(async (options: {
+    topic: string;
+    maxReviews: string;
+    skipResearch?: boolean;
+    output?: string;
+  }) => {
+    const { topic, maxReviews, skipResearch, output } = options;
+
+    logger.info(`\n📝 記事生成を開始します`);
+    logger.info(`   トピック: ${topic}`);
+    logger.info(`   最大レビュー回数: ${maxReviews}`);
+    if (skipResearch) logger.info(`   リサーチ: スキップ`);
+    logger.info("");
+
+    const graph = buildGraph();
+
+    const result = await graph.invoke({
+      topic,
+      maxReviews: parseInt(maxReviews, 10),
+      skipResearch: !!skipResearch,
+      reviewCount: 0,
+      research: "",
+      outline: "",
+      draft: "",
+      editedDraft: "",
+      review: "",
+      finalArticle: "",
+      status: "researching" as const,
+    });
+
+    logger.info("\n✅ 記事生成が完了しました\n");
+
+    if (output) {
+      writeFileSync(output, result.finalArticle, "utf-8");
+      logger.info(`📄 出力先: ${output}\n`);
+    } else {
+      console.log("---\n");
+      console.log(result.finalArticle);
+      console.log("\n---");
+    }
+  });
 
 program.parse();
-
-const opts = program.opts<{
-  topic: string;
-  language: 'ja' | 'en';
-  length: string;
-  output?: string;
-  maxRetries: string;
-}>();
-
-const agent = new SupervisorAgent({
-  topic: opts.topic,
-  language: opts.language,
-  maxLength: parseInt(opts.length, 10),
-  output: opts.output,
-  maxRetries: parseInt(opts.maxRetries, 10),
-});
-
-const article = await agent.run();
-
-if (opts.output) {
-  mkdirSync(dirname(opts.output), { recursive: true });
-  writeFileSync(opts.output, article.content, 'utf-8');
-  logger.always(`記事を保存しました: ${opts.output}`);
-} else {
-  logger.always(article.content);
-}

@@ -1,60 +1,37 @@
-import type { ArticlePlan, ResearchResult } from '../types/index';
+export const WRITER_SYSTEM = `あなたは優秀なライターです。
+アウトラインとリサーチ結果をもとに、質の高い記事を執筆してください。
 
-export function buildIntroPrompt(
-  plan: ArticlePlan,
-  research: ResearchResult,
-  language: string,
-  skillsText?: string
-): string {
-  const skillsSection = skillsText ? `\n\n${skillsText}\n\n` : '';
+執筆の指針：
+- 読みやすく、論理的な構成を心がける
+- 具体的な事例やデータを盛り込む
+- 専門用語は適切に説明する
+- マークダウン形式で出力する
+- 各セクションに十分な分量を確保する`;
 
-  return `あなたはプロの記事ライターです。以下の情報を元に記事の導入部を執筆してください。
-${skillsSection}
+export const WRITER_HUMAN = `以下の情報をもとに記事を執筆してください。
 
-タイトル: ${plan.title}
-導入の方向性: ${plan.introduction}
-リサーチ概要: ${research.summary}
-出力言語: ${language === 'ja' ? '日本語' : 'English'}
+## トピック
+{topic}
 
-魅力的で読者を引き込む導入文を300〜400字で書いてください。見出しは不要です。本文のみ返してください。`;
-}
+## リサーチ結果
+{research}
 
-export function buildSectionPrompt(
-  sectionTitle: string,
-  sectionDescription: string,
-  research: ResearchResult,
-  language: string,
-  skillsText?: string
-): string {
-  const skillsSection = skillsText ? `\n\n${skillsText}\n\n` : '';
+## アウトライン
+{outline}`;
 
-  return `あなたはプロの記事ライターです。以下のセクションを執筆してください。
-${skillsSection}
+export const WRITER_REVISION_HUMAN = `以下のレビューフィードバックを踏まえて、記事を改善してください。
 
-セクションタイトル: ${sectionTitle}
-内容の方向性: ${sectionDescription}
-参考情報:
-${research.keyPoints.map((p) => `- ${p}`).join('\n')}
-出力言語: ${language === 'ja' ? '日本語' : 'English'}
+## トピック
+{topic}
 
-このセクションの本文を400〜600字で書いてください。見出しは不要です。本文のみ返してください。`;
-}
+## リサーチ結果
+{research}
 
-export function buildConclusionPrompt(
-  plan: ArticlePlan,
-  language: string,
-  skillsText?: string
-): string {
-  const skillsSection = skillsText ? `\n\n${skillsText}\n\n` : '';
+## アウトライン
+{outline}
 
-  return `あなたはプロの記事ライターです。以下の記事のまとめを執筆してください。
-${skillsSection}
+## 現在の原稿
+{draft}
 
-記事タイトル: ${plan.title}
-まとめの方向性: ${plan.conclusion}
-セクション構成:
-${plan.sections.map((s) => `- ${s.title}`).join('\n')}
-出力言語: ${language === 'ja' ? '日本語' : 'English'}
-
-読者への行動喚起を含む、まとめの文章を200〜300字で書いてください。見出しは不要です。本文のみ返してください。`;
-}
+## レビューフィードバック
+{review}`;

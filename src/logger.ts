@@ -1,50 +1,42 @@
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'silent';
+const LOG_LEVELS = ["error", "warn", "info", "debug"] as const;
+type LogLevel = (typeof LOG_LEVELS)[number];
 
-const LEVELS: Record<LogLevel, number> = {
-  debug: 0,
-  info: 1,
-  warn: 2,
-  error: 3,
-  silent: 4,
+const LEVEL_PRIORITY: Record<LogLevel, number> = {
+  error: 0,
+  warn: 1,
+  info: 2,
+  debug: 3,
 };
 
-let cachedLevel: LogLevel | undefined;
+class Logger {
+  private level: LogLevel;
 
-function getLevel(): LogLevel {
-  if (cachedLevel !== undefined) return cachedLevel;
-  const env = process.env.LOG_LEVEL as string | undefined;
-  if (env && env in LEVELS) {
-    cachedLevel = env as LogLevel;
-  } else {
-    cachedLevel = 'info';
+  constructor() {
+    const env = (process.env["LOG_LEVEL"] ?? "info").toLowerCase();
+    this.level = LOG_LEVELS.includes(env as LogLevel)
+      ? (env as LogLevel)
+      : "info";
   }
-  return cachedLevel;
-}
 
-function shouldLog(level: LogLevel): boolean {
-  return LEVELS[level] >= LEVELS[getLevel()];
-}
+  private shouldLog(level: LogLevel): boolean {
+    return LEVEL_PRIORITY[level] <= LEVEL_PRIORITY[this.level];
+  }
 
-export const logger = {
-  debug(...args: unknown[]): void {
-    if (shouldLog('debug')) console.log(...args);
-  },
-  info(...args: unknown[]): void {
-    if (shouldLog('info')) console.log(...args);
-  },
-  warn(...args: unknown[]): void {
-    if (shouldLog('warn')) console.warn(...args);
-  },
   error(...args: unknown[]): void {
-    if (shouldLog('error')) console.error(...args);
-  },
-  always(...args: unknown[]): void {
-    console.log(...args);
-  },
-  _resetLevel(): void {
-    cachedLevel = undefined;
-  },
-  _setLevel(l: LogLevel): void {
-    cachedLevel = l;
-  },
-};
+    if (this.shouldLog("error")) console.error("[ERROR]", ...args);
+  }
+
+  warn(...args: unknown[]): void {
+    if (this.shouldLog("warn")) console.warn("[WARN]", ...args);
+  }
+
+  info(...args: unknown[]): void {
+    if (this.shouldLog("info")) console.log("[INFO]", ...args);
+  }
+
+  debug(...args: unknown[]): void {
+    if (this.shouldLog("debug")) console.log("[DEBUG]", ...args);
+  }
+}
+
+export const logger = new Logger();

@@ -1,36 +1,14 @@
-import type { Article } from '../types/index';
+export const EDITOR_SYSTEM = `あなたは優秀な編集者・校正者です。
+原稿を受け取り、以下の観点で編集・校正を行ってください：
 
-export function buildEditorPrompt(article: Article, language: string, skillsText?: string): string {
-  const skillsSection = skillsText ? `\n\n${skillsText}\n\n` : '';
+- 文法・表記の統一
+- 文章の流れと読みやすさの改善
+- 冗長な表現の削除
+- 事実関係の整合性チェック
+- マークダウン形式の整備
 
-  const fullText = [
-    `# ${article.title}`,
-    '',
-    article.sections.find((s) => s.title === '__intro')?.content ?? '',
-    '',
-    ...article.sections
-      .filter((s) => s.title !== '__intro' && s.title !== '__conclusion')
-      .flatMap((s) => [`## ${s.title}`, '', s.content, '']),
-    article.sections.find((s) => s.title === '__conclusion')?.content ?? '',
-  ].join('\n');
+編集後の完成原稿をそのまま出力してください（コメントや注釈は不要）。`;
 
-  return `あなたはプロの編集者です。以下の記事を校正・改善してください。
-${skillsSection}
+export const EDITOR_HUMAN = `以下の原稿を編集・校正してください：
 
-出力言語: ${language === 'ja' ? '日本語' : 'English'}
-
-チェック項目:
-- 文体・トーンの一貫性
-- 不自然な表現・誤字脱字の修正
-- 段落間のつながりの改善
-- 読みやすさの向上
-
-以下の記事を改善して、完成版をMarkdown形式で返してください。
-構造（見出し・段落）は維持してください。
-
----
-${fullText}
----
-
-改善後の記事全文のみを返してください。説明文は不要です。`;
-}
+{draft}`;
