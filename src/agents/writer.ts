@@ -1,21 +1,17 @@
+import {
+  type AgentConfig,
+  createStandardAgent,
+  type RevisionConfig,
+} from "@/agents/agentFactory.js";
 import { WRITER_HUMAN, WRITER_REVISION_HUMAN, WRITER_SYSTEM } from "@/prompts/writer.js";
-import { type AgentConfig, createStandardAgent, type RevisionConfig } from "@/agents/agentFactory.js";
+import {
+  type WriterInput,
+  type WriterRevisionInput,
+  writerInputSchema,
+  writerRevisionInputSchema,
+} from "@/types/prompts.js";
 
-type WriterInput = {
-  topic: string;
-  research: string;
-  outline: string;
-};
-
-type WriterRevisionInput = {
-  topic: string;
-  research: string;
-  outline: string;
-  draft: string;
-  review: string;
-};
-
-const revisionConfig: RevisionConfig<WriterRevisionInput> = {
+const revisionConfig: RevisionConfig<WriterRevisionInput, typeof writerRevisionInputSchema> = {
   humanPromptTemplate: WRITER_REVISION_HUMAN,
   inputExtractor: (state) => ({
     topic: state.topic,
@@ -26,13 +22,15 @@ const revisionConfig: RevisionConfig<WriterRevisionInput> = {
   }),
   completionMessage: "改稿完了",
   condition: (state) => !!state.review,
+  inputSchema: writerRevisionInputSchema,
 };
 
-const config: AgentConfig<WriterInput, "writerRetryCount"> = {
+const config: AgentConfig<WriterInput, "writerRetryCount", typeof writerInputSchema> = {
   name: "Writer",
   modelType: "writer",
   systemPrompt: WRITER_SYSTEM,
   humanPromptTemplate: WRITER_HUMAN,
+  inputSchema: writerInputSchema,
   inputExtractor: (state) => ({
     topic: state.topic,
     research: state.research,

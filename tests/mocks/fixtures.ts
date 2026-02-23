@@ -104,8 +104,7 @@ export const createTestHelpers = {
   stringOfLength: (length: number): string => "x".repeat(length),
 
   /** 指定した数の改行を含む文字列を生成 */
-  stringWithNewlines: (newlineCount: number): string =>
-    "text".concat("\n".repeat(newlineCount)),
+  stringWithNewlines: (newlineCount: number): string => "text".concat("\n".repeat(newlineCount)),
 
   /** 指定したトークン使用量を持つモックレスポンスを作成 */
   mockResponseWithUsage: (

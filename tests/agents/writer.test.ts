@@ -4,9 +4,9 @@
  * Writerエージェントの動作（初稿・改稿モード）を検証します。
  */
 
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { writerNode } from "../../src/agents/writer.js";
-import { outlinedFixture, editedFixture } from "../mocks/mockState.js";
+import { editedFixture, outlinedFixture } from "../mocks/mockState.js";
 
 describe("writerNode", () => {
   describe("初稿モード", () => {

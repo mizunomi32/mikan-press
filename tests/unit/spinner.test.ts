@@ -4,7 +4,7 @@
  * スピナー開始/停止の基本動作を検証します。
  */
 
-import { beforeEach, afterEach, describe, test, expect } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { startSpinner, stopSpinner, withSpinner } from "../../src/spinner.js";
 
 // setIntervalとclearIntervalをモック

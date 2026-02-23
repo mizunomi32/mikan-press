@@ -1,13 +1,13 @@
-import { RESEARCHER_HUMAN, RESEARCHER_SYSTEM } from "@/prompts/researcher.js";
 import { type AgentConfig, createStandardAgent } from "@/agents/agentFactory.js";
+import { RESEARCHER_HUMAN, RESEARCHER_SYSTEM } from "@/prompts/researcher.js";
+import { type ResearcherInput, researcherInputSchema } from "@/types/prompts.js";
 
-type ResearcherInput = { topic: string };
-
-const config: AgentConfig<ResearcherInput, "researcherRetryCount"> = {
+const config: AgentConfig<ResearcherInput, "researcherRetryCount", typeof researcherInputSchema> = {
   name: "Researcher",
   modelType: "researcher",
   systemPrompt: RESEARCHER_SYSTEM,
   humanPromptTemplate: RESEARCHER_HUMAN,
+  inputSchema: researcherInputSchema,
   inputExtractor: (state) => ({ topic: state.topic }),
   outputMapper: (content) => ({ research: content }),
   nextStatus: "planning",

@@ -4,7 +4,7 @@
  * ルーター関数とグラフ構造を検証します。
  */
 
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { buildGraph } from "../../src/graph.js";
 
 // ルーター関数をテストするためのヘルパー

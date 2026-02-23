@@ -4,7 +4,7 @@
  * Plannerエージェントの動作を検証します。
  */
 
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { plannerNode } from "../../src/agents/planner.js";
 import { researchedFixture } from "../mocks/mockState.js";
 

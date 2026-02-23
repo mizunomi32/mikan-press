@@ -8,11 +8,13 @@
 
 import type { AIMessage } from "@langchain/core/messages";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
+import type { z } from "zod";
 import { type AgentRole, createModel } from "@/config.js";
 import { logger } from "@/logger.js";
 import { withSpinner } from "@/spinner.js";
 import type { ArticleState } from "@/state.js";
 import { logTokenUsage } from "@/tokenUsage.js";
+import { validatePromptInput } from "@/types/prompts.js";
 
 // ============================================================================
 // 型定義
@@ -30,7 +32,11 @@ export type RetryKey =
 /**
  * 標準エージェントの設定オブジェクト
  */
-export interface AgentConfig<TInput extends Record<string, unknown>, TRetryKey extends RetryKey> {
+export interface AgentConfig<
+  TInput extends Record<string, unknown>,
+  TRetryKey extends RetryKey,
+  TInputSchema extends z.ZodType,
+> {
   /** エージェント名（ログ出力用） */
   name: string;
   /** モデル種別 */
@@ -39,6 +45,8 @@ export interface AgentConfig<TInput extends Record<string, unknown>, TRetryKey e
   systemPrompt: string;
   /** ヒューマンプロンプトテンプレート */
   humanPromptTemplate: string;
+  /** 入力バリデーション用 Zod スキーマ */
+  inputSchema: TInputSchema;
   /** ステートから入力値を抽出する関数 */
   inputExtractor: (state: typeof ArticleState.State) => TInput;
   /** AI応答からステート更新値を生成する関数 */
@@ -57,13 +65,16 @@ export interface AgentConfig<TInput extends Record<string, unknown>, TRetryKey e
   /** スキップ時のレスポンス（オプション） */
   skipResponse?: Partial<typeof ArticleState.State>;
   /** 改稿用の設定（オプション・Writer用） */
-  revisionConfig?: RevisionConfig<TInput>;
+  revisionConfig?: RevisionConfig<TInput, TInputSchema>;
 }
 
 /**
  * 改稿用の追加設定
  */
-export interface RevisionConfig<TInput extends Record<string, unknown>> {
+export interface RevisionConfig<
+  TInput extends Record<string, unknown>,
+  TInputSchema extends z.ZodType,
+> {
   /** 改稿用ヒューマンプロンプト */
   humanPromptTemplate: string;
   /** 改稿時の入力抽出関数 */
@@ -72,12 +83,14 @@ export interface RevisionConfig<TInput extends Record<string, unknown>> {
   completionMessage: string;
   /** 改稿モード適用条件 */
   condition: (state: typeof ArticleState.State) => boolean;
+  /** 改稿時の入力バリデーション用 Zod スキーマ */
+  inputSchema: TInputSchema;
 }
 
 /**
  * Reviewer専用エージェントの設定オブジェクト
  */
-export interface ReviewerAgentConfig {
+export interface ReviewerAgentConfig<TInputSchema extends z.ZodType> {
   /** エージェント名（ログ出力用） */
   name: string;
   /** モデル種別 */
@@ -86,6 +99,8 @@ export interface ReviewerAgentConfig {
   systemPrompt: string;
   /** ヒューマンプロンプトテンプレート */
   humanPromptTemplate: string;
+  /** 入力バリデーション用 Zod スキーマ */
+  inputSchema: TInputSchema;
   /** ステートから入力値を抽出する関数 */
   inputExtractor: (state: typeof ArticleState.State) => Record<string, unknown>;
 }
@@ -148,14 +163,16 @@ export async function executeAgentChain<T extends Record<string, unknown>>(
 export function createStandardAgent<
   TInput extends Record<string, unknown>,
   TRetryKey extends RetryKey,
+  TInputSchema extends z.ZodType,
 >(
-  config: AgentConfig<TInput, TRetryKey>,
+  config: AgentConfig<TInput, TRetryKey, TInputSchema>,
 ): (state: typeof ArticleState.State) => Promise<Partial<typeof ArticleState.State>> {
   const {
     name,
     modelType,
     systemPrompt,
     humanPromptTemplate,
+    inputSchema,
     inputExtractor,
     outputMapper,
     nextStatus,
@@ -195,9 +212,13 @@ export function createStandardAgent<
     const attempt = currentCount + 1;
 
     // 入力値の抽出
-    const input = isRevision
+    const extractedInput = isRevision
       ? (revisionConfig?.inputExtractor(state) as TInput)
       : inputExtractor(state);
+
+    // 入力バリデーション（改稿時は revisionConfig.inputSchema、初回は inputSchema）
+    const schema = isRevision && revisionConfig ? revisionConfig.inputSchema : inputSchema;
+    const input = validatePromptInput(schema, extractedInput as Record<string, unknown>, name);
 
     // デバッグログ（各エージェント固有の値）
     logger.debug(`[${name}] 入力:`, JSON.stringify(input).slice(0, 200));
@@ -209,7 +230,12 @@ export function createStandardAgent<
 
     // モデル実行
     const prompt = isRevision && revisionPrompt ? revisionPrompt : initialPrompt;
-    const result = await executeAgentChain(name, modelType, prompt, input);
+    const result = await executeAgentChain(
+      name,
+      modelType,
+      prompt,
+      input as Record<string, unknown>,
+    );
 
     // レスポンス解析
     const raw =
@@ -254,10 +280,11 @@ export function createStandardAgent<
  * @param config - Reviewer設定オブジェクト
  * @returns LangGraphノード関数
  */
-export function createReviewerAgent(
-  config: ReviewerAgentConfig,
+export function createReviewerAgent<TInputSchema extends z.ZodType>(
+  config: ReviewerAgentConfig<TInputSchema>,
 ): (state: typeof ArticleState.State) => Promise<Partial<typeof ArticleState.State>> {
-  const { name, modelType, systemPrompt, humanPromptTemplate, inputExtractor } = config;
+  const { name, modelType, systemPrompt, humanPromptTemplate, inputSchema, inputExtractor } =
+    config;
 
   const prompt = ChatPromptTemplate.fromMessages([
     ["system", systemPrompt],
@@ -273,8 +300,17 @@ export function createReviewerAgent(
     // デバッグログ
     logger.debug(`[${name}] 編集済み原稿:`, state.editedDraft.slice(0, 200));
 
+    // 入力値の抽出とバリデーション
+    const extractedInput = inputExtractor(state);
+    const input = validatePromptInput(inputSchema, extractedInput as Record<string, unknown>, name);
+
     // モデル実行
-    const result = await executeAgentChain(name, modelType, prompt, inputExtractor(state));
+    const result = await executeAgentChain(
+      name,
+      modelType,
+      prompt,
+      input as Record<string, unknown>,
+    );
 
     // レスポンス抽出
     const reviewText =
