@@ -4,7 +4,7 @@
  * ログレベル制御・出力フィルタリングを検証します。
  */
 
-import { beforeEach, describe, test, expect } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { Logger } from "../../src/logger.js";
 
 // コンソール出力をキャプチャするヘルパー

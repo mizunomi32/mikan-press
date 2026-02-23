@@ -4,7 +4,7 @@
  * ReviewerエージェントのAPPROVE/REVISE判定と最大レビュー回数制御を検証します。
  */
 
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { reviewerNode } from "../../src/agents/reviewer.js";
 import { editedFixture, reviewApprovedFixture, reviewReviseFixture } from "../mocks/mockState.js";
 

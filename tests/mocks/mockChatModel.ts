@@ -4,12 +4,9 @@
  * テストで予測可能な応答を返すためのモックチャットモデルです。
  */
 
-import type { AIMessage } from "@langchain/core/messages";
+import type { BaseChatModelParams, LanguageModelInput } from "@langchain/core/language_models/base";
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import type {
-  BaseChatModelParams,
-  LanguageModelInput,
-} from "@langchain/core/language_models/base";
+import type { AIMessage } from "@langchain/core/messages";
 
 export interface MockChatModelParams extends BaseChatModelParams {
   /** 返す応答のキュー（FIFO） */
@@ -34,7 +31,11 @@ export class MockChatModel extends BaseChatModel {
   }
 
   private responsesQueue: string[];
-  private usageQueue: Array<{ input_tokens?: number; output_tokens?: number; total_tokens?: number }>;
+  private usageQueue: Array<{
+    input_tokens?: number;
+    output_tokens?: number;
+    total_tokens?: number;
+  }>;
 
   lc_serializable = true;
 

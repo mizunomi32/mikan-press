@@ -4,7 +4,7 @@
  * Editorエージェントの動作を検証します。
  */
 
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { editorNode } from "../../src/agents/editor.js";
 import { draftedFixture } from "../mocks/mockState.js";
 

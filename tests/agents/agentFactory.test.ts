@@ -4,7 +4,7 @@
  * parseRetryResponse(), createStandardAgent(), createReviewerAgent() のテスト
  */
 
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { parseRetryResponse } from "../../src/agents/agentFactory.js";
 import { sampleResponses } from "../mocks/fixtures.js";
 
@@ -17,12 +17,7 @@ describe("parseRetryResponse", () => {
     });
 
     test("大文字小文字を区別しない", () => {
-      const testCases = [
-        "応答\nRETRY",
-        "応答\nretry",
-        "応答\nRetry",
-        "応答\nReTry",
-      ];
+      const testCases = ["応答\nRETRY", "応答\nretry", "応答\nRetry", "応答\nReTry"];
 
       for (const input of testCases) {
         const result = parseRetryResponse(input);
@@ -31,12 +26,7 @@ describe("parseRetryResponse", () => {
     });
 
     test("周辺の空白を許容", () => {
-      const testCases = [
-        "応答\n RETRY",
-        "応答\nRETRY ",
-        "応答\n retry  ",
-        "応答\n  retry",
-      ];
+      const testCases = ["応答\n RETRY", "応答\nRETRY ", "応答\n retry  ", "応答\n  retry"];
 
       for (const input of testCases) {
         const result = parseRetryResponse(input);

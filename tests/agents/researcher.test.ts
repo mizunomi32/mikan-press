@@ -4,7 +4,7 @@
  * Researcherエージェントの動作を検証します。
  */
 
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { researcherNode } from "../../src/agents/researcher.js";
 import { initialFixture, skipResearchFixture } from "../mocks/mockState.js";
 

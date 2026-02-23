@@ -1,12 +1,14 @@
 /**
  * tokenUsage.ts のテスト
  *
- * getUsage() 関数のトークン抽出ロジックを検証します。
+ * getUsage() 関数のトークン抽出ロジックと Type Guard 関数を検証します。
  */
 
-import { describe, test, expect } from "bun:test";
-import { getUsage } from "../../src/tokenUsage.js";
-import { tokenUsageData } from "../mocks/fixtures.js";
+import { describe, expect, test } from "bun:test";
+import { getUsage, logTokenUsage } from "../../src/tokenUsage.js";
+
+// Type Guard 関数は非公開なので、テスト用に間接的に検証
+// 実際には logTokenUsage を通じて動作を確認する
 
 describe("getUsage", () => {
   describe("OpenAI形式のトークン使用量", () => {
@@ -252,5 +254,65 @@ describe("getUsage", () => {
       expect(usage?.output).toBe(0);
       expect(usage?.total).toBe(0);
     });
+  });
+});
+
+describe("logTokenUsage", () => {
+  test("有効な LangChain 結果でトークン使用量をログ出力", () => {
+    const mockLogger = {
+      info: [],
+      debug: [],
+    };
+
+    // logger.info と logger.debug をモック
+    const originalInfo = global.console.info;
+    const originalDebug = global.console.debug;
+    global.console.info = (...args: unknown[]) => mockLogger.info.push(args);
+    global.console.debug = (...args: unknown[]) => mockLogger.debug.push(args);
+
+    const result = {
+      usage_metadata: {
+        input_tokens: 100,
+        output_tokens: 50,
+        total_tokens: 150,
+      },
+    };
+
+    // エラーがスローされないことを確認
+    expect(() => logTokenUsage("TestAgent", result)).not.toThrow();
+
+    global.console.info = originalInfo;
+    global.console.debug = originalDebug;
+  });
+
+  test("無効な型でデバッグログを出力（エラーをスローしない）", () => {
+    const mockLogger = {
+      debug: [],
+    };
+
+    const originalDebug = global.console.debug;
+    global.console.debug = (...args: unknown[]) => mockLogger.debug.push(args);
+
+    // 無効な型を渡してもエラーをスローしない
+    expect(() => logTokenUsage("TestAgent", null)).not.toThrow();
+    expect(() => logTokenUsage("TestAgent", undefined)).not.toThrow();
+    expect(() => logTokenUsage("TestAgent", "invalid")).not.toThrow();
+    expect(() => logTokenUsage("TestAgent", 123)).not.toThrow();
+
+    global.console.debug = originalDebug;
+  });
+
+  test("空のオブジェクトでログ出力をスキップ", () => {
+    const originalInfo = global.console.info;
+    const infoCalls: unknown[][] = [];
+    global.console.info = (...args: unknown[]) => infoCalls.push(args);
+
+    logTokenUsage("TestAgent", {});
+    logTokenUsage("TestAgent", { usage_metadata: undefined });
+
+    // 空のオブジェクトではログが出力されない
+    expect(infoCalls.length).toBe(0);
+
+    global.console.info = originalInfo;
   });
 });

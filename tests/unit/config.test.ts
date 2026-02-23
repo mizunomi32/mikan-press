@@ -4,7 +4,8 @@
  * parseModelString() 関数のパース処理を検証します。
  */
 
-import { beforeAll, describe, test, expect } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
+
 // 設定をモックするため、環境変数を設定してからインポート
 process.env.OPENAI_API_KEY = "test-key";
 process.env.GOOGLE_API_KEY = "test-key";
@@ -115,8 +116,14 @@ describe("ModelString パースロジック（直接的検証）", () => {
   test("provider/model 形式を正しく分割できる", () => {
     const testCases = [
       { input: "openai/gpt-4o", expected: { provider: "openai", model: "gpt-4o" } },
-      { input: "gemini/gemini-2.5-flash", expected: { provider: "gemini", model: "gemini-2.5-flash" } },
-      { input: "openrouter/anthropic/claude-3.5-sonnet", expected: { provider: "openrouter", model: "anthropic/claude-3.5-sonnet" } },
+      {
+        input: "gemini/gemini-2.5-flash",
+        expected: { provider: "gemini", model: "gemini-2.5-flash" },
+      },
+      {
+        input: "openrouter/anthropic/claude-3.5-sonnet",
+        expected: { provider: "openrouter", model: "anthropic/claude-3.5-sonnet" },
+      },
       { input: "glm/glm-4-flash", expected: { provider: "glm", model: "glm-4-flash" } },
     ];
 
