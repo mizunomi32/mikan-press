@@ -1,9 +1,11 @@
+import type { Tool } from "@langchain/core/tools";
 import {
-  type AgentConfig,
-  createStandardAgent,
+  createToolEnabledAgent,
   type RevisionConfig,
+  type ToolEnabledAgentConfig,
 } from "@/agents/agentFactory.js";
 import { WRITER_HUMAN, WRITER_REVISION_HUMAN, WRITER_SYSTEM } from "@/prompts/writer.js";
+import { dateTimeTool } from "@/tools/datetime.js";
 import {
   type WriterInput,
   type WriterRevisionInput,
@@ -25,7 +27,11 @@ const revisionConfig: RevisionConfig<WriterRevisionInput, typeof writerRevisionI
   inputSchema: writerRevisionInputSchema,
 };
 
-const config: AgentConfig<WriterInput, "writerRetryCount", typeof writerInputSchema> = {
+const config: ToolEnabledAgentConfig<
+  WriterInput,
+  "writerRetryCount",
+  typeof writerInputSchema
+> = {
   name: "Writer",
   modelType: "writer",
   systemPrompt: WRITER_SYSTEM,
@@ -41,6 +47,7 @@ const config: AgentConfig<WriterInput, "writerRetryCount", typeof writerInputSch
   retryKey: "writerRetryCount",
   completionMessage: "初稿完了",
   revisionConfig,
+  tools: [dateTimeTool as unknown as Tool],
 };
 
-export const writerNode = createStandardAgent(config);
+export const writerNode = createToolEnabledAgent(config);
