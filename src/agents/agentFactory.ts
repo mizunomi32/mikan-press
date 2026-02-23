@@ -11,12 +11,14 @@ import { ToolMessage } from "@langchain/core/messages";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import type { Tool } from "@langchain/core/tools";
 import type { z } from "zod";
-import { type AgentRole, createModel } from "@/config.js";
+import { type AgentRole, createModel, getProvider, getRetryConfig } from "@/config.js";
+import { AgentError } from "@/errors/index.js";
 import { logger } from "@/logger.js";
 import { withSpinner } from "@/spinner.js";
 import type { ArticleState } from "@/state.js";
 import { logTokenUsage } from "@/tokenUsage.js";
 import { validatePromptInput } from "@/types/prompts.js";
+import { withModelRetry } from "@/utils/retry.js";
 
 // ============================================================================
 // 型定義
@@ -144,11 +146,14 @@ export function parseRetryResponse(raw: string): {
 /**
  * モデルチェーン実行（スピナー・トークンログ含む）
  *
+ * リトライロジックを含み、APIエラー時に指数バックオフで再試行します。
+ *
  * @param agentName - エージェント名（ログ用）
  * @param modelType - モデル種別
  * @param prompt - チャットプロンプトテンプレート
  * @param input - プロンプト入力値
  * @returns AI応答メッセージ
+ * @throws AgentError リトライ不可能なエラーまたは最大リトライ回数超過時
  */
 export async function executeAgentChain<T extends Record<string, unknown>>(
   agentName: string,
@@ -158,9 +163,25 @@ export async function executeAgentChain<T extends Record<string, unknown>>(
 ): Promise<AIMessage> {
   const model = createModel(modelType);
   const chain = prompt.pipe(model);
-  const result = await withSpinner(`[${agentName}] 思考中...`, () => chain.invoke(input));
-  logTokenUsage(agentName, result as unknown);
-  return result as AIMessage;
+  const provider = getProvider(modelType);
+  const retryConfig = getRetryConfig();
+
+  try {
+    const result = await withModelRetry(
+      () => withSpinner(`[${agentName}] 思考中...`, () => chain.invoke(input)),
+      agentName,
+      provider,
+      retryConfig,
+    );
+    logTokenUsage(agentName, result as unknown);
+    return result as AIMessage;
+  } catch (error) {
+    // AgentError の場合は詳細をログ出力して再スロー
+    if (error instanceof AgentError) {
+      logger.error(`[${agentName}] ${error.toDetailedString()}`);
+    }
+    throw error;
+  }
 }
 
 /**
@@ -177,12 +198,15 @@ const MAX_TOOL_ITERATIONS = 5;
  * 4. ツール結果を ToolMessage として会話履歴に追加
  * 5. モデルに再送信（最終回答まで繰り返し）
  *
+ * 各モデル呼び出しにはリトライロジックが適用されます。
+ *
  * @param agentName - エージェント名（ログ用）
  * @param modelType - モデル種別
  * @param prompt - チャットプロンプトテンプレート
  * @param input - プロンプト入力値
  * @param tools - 使用可能なツール配列
  * @returns AI応答メッセージとツール使用有無
+ * @throws AgentError リトライ不可能なエラーまたは最大リトライ回数超過時
  */
 export async function executeToolEnabledAgentChain<T extends Record<string, unknown>>(
   agentName: string,
@@ -192,6 +216,8 @@ export async function executeToolEnabledAgentChain<T extends Record<string, unkn
   tools: Tool[],
 ): Promise<{ result: AIMessage; toolCallsUsed: boolean }> {
   const model = createModel(modelType);
+  const provider = getProvider(modelType);
+  const retryConfig = getRetryConfig();
 
   logger.debug(`[${agentName}] モデル: ${model.constructor.name}`);
 
@@ -208,80 +234,97 @@ export async function executeToolEnabledAgentChain<T extends Record<string, unkn
   // ツール名→ツールインスタンスのマップ
   const toolMap = new Map(tools.map((t) => [t.name, t]));
 
-  for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
-    // モデル呼び出し
-    const aiMessage = await withSpinner(
-      `[${agentName}] 思考中...${iteration > 0 ? `（ツール実行後 ${iteration}回目）` : ""}`,
-      () => modelWithTools.invoke(messages),
-    ) as AIMessage;
+  try {
+    for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
+      // モデル呼び出し（リトライ付き）
+      const aiMessage = await withModelRetry(
+        () =>
+          withSpinner(
+            `[${agentName}] 思考中...${iteration > 0 ? `（ツール実行後 ${iteration}回目）` : ""}`,
+            () => modelWithTools.invoke(messages),
+          ),
+        agentName,
+        provider,
+        retryConfig,
+      ).then((r) => r as AIMessage);
 
-    logTokenUsage(agentName, aiMessage as unknown);
+      logTokenUsage(agentName, aiMessage as unknown);
 
-    // tool_calls があるか確認
-    const toolCalls = aiMessage.tool_calls ?? [];
-    if (toolCalls.length === 0) {
-      // ツールコールなし → 最終回答として返す
-      return { result: aiMessage, toolCallsUsed };
-    }
-
-    // ツールコールを実行
-    toolCallsUsed = true;
-    logger.info(`[${agentName}] ${toolCalls.length}個のツールコールを実行します`);
-
-    // AIメッセージを会話履歴に追加（tool_calls を含む）
-    messages.push(aiMessage);
-
-    for (const toolCall of toolCalls) {
-      const toolName = toolCall.name;
-      const toolArgs = toolCall.args;
-      const toolCallId = toolCall.id ?? `call_${Date.now()}`;
-
-      logger.info(`[${agentName}]   → ${toolName}(${JSON.stringify(toolArgs).slice(0, 200)})`);
-
-      const tool = toolMap.get(toolName);
-      if (!tool) {
-        logger.warn(`[${agentName}] 未知のツール: ${toolName}`);
-        messages.push(
-          new ToolMessage({
-            content: `エラー: ツール "${toolName}" は利用できません`,
-            tool_call_id: toolCallId,
-          }),
-        );
-        continue;
+      // tool_calls があるか確認
+      const toolCalls = aiMessage.tool_calls ?? [];
+      if (toolCalls.length === 0) {
+        // ツールコールなし → 最終回答として返す
+        return { result: aiMessage, toolCallsUsed };
       }
 
-      try {
-        const toolResult = await tool.invoke(toolArgs);
-        const resultStr = typeof toolResult === "string" ? toolResult : JSON.stringify(toolResult);
-        const truncatedResult = resultStr.length > 300 ? `${resultStr.slice(0, 300)}...` : resultStr;
-        logger.info(`[${agentName}]   ← ${toolName}: ${truncatedResult}`);
+      // ツールコールを実行
+      toolCallsUsed = true;
+      logger.info(`[${agentName}] ${toolCalls.length}個のツールコールを実行します`);
 
-        messages.push(
-          new ToolMessage({
-            content: resultStr,
-            tool_call_id: toolCallId,
-          }),
-        );
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        logger.error(`[${agentName}]   ✗ ${toolName} エラー: ${errorMsg}`);
-        messages.push(
-          new ToolMessage({
-            content: `ツール実行エラー: ${errorMsg}`,
-            tool_call_id: toolCallId,
-          }),
-        );
+      // AIメッセージを会話履歴に追加（tool_calls を含む）
+      messages.push(aiMessage);
+
+      for (const toolCall of toolCalls) {
+        const toolName = toolCall.name;
+        const toolArgs = toolCall.args;
+        const toolCallId = toolCall.id ?? `call_${Date.now()}`;
+
+        logger.info(`[${agentName}]   → ${toolName}(${JSON.stringify(toolArgs).slice(0, 200)})`);
+
+        const tool = toolMap.get(toolName);
+        if (!tool) {
+          logger.warn(`[${agentName}] 未知のツール: ${toolName}`);
+          messages.push(
+            new ToolMessage({
+              content: `エラー: ツール "${toolName}" は利用できません`,
+              tool_call_id: toolCallId,
+            }),
+          );
+          continue;
+        }
+
+        try {
+          const toolResult = await tool.invoke(toolArgs);
+          const resultStr = typeof toolResult === "string" ? toolResult : JSON.stringify(toolResult);
+          const truncatedResult = resultStr.length > 300 ? `${resultStr.slice(0, 300)}...` : resultStr;
+          logger.info(`[${agentName}]   ← ${toolName}: ${truncatedResult}`);
+
+          messages.push(
+            new ToolMessage({
+              content: resultStr,
+              tool_call_id: toolCallId,
+            }),
+          );
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          logger.error(`[${agentName}]   ✗ ${toolName} エラー: ${errorMsg}`);
+          messages.push(
+            new ToolMessage({
+              content: `ツール実行エラー: ${errorMsg}`,
+              tool_call_id: toolCallId,
+            }),
+          );
+        }
       }
     }
+
+    // 最大反復回数到達 → 最後のモデル呼び出し（ツールなし・リトライ付き）
+    logger.warn(`[${agentName}] ツール実行ループが最大回数(${MAX_TOOL_ITERATIONS})に達しました`);
+    const finalResult = await withModelRetry(
+      () => withSpinner(`[${agentName}] 最終応答生成中...`, () => modelWithTools.invoke(messages)),
+      agentName,
+      provider,
+      retryConfig,
+    ).then((r) => r as AIMessage);
+    logTokenUsage(agentName, finalResult as unknown);
+    return { result: finalResult, toolCallsUsed };
+  } catch (error) {
+    // AgentError の場合は詳細をログ出力して再スロー
+    if (error instanceof AgentError) {
+      logger.error(`[${agentName}] ${error.toDetailedString()}`);
+    }
+    throw error;
   }
-
-  // 最大反復回数到達 → 最後のモデル呼び出し（ツールなし）
-  logger.warn(`[${agentName}] ツール実行ループが最大回数(${MAX_TOOL_ITERATIONS})に達しました`);
-  const finalResult = await withSpinner(`[${agentName}] 最終応答生成中...`, () =>
-    modelWithTools.invoke(messages),
-  ) as AIMessage;
-  logTokenUsage(agentName, finalResult as unknown);
-  return { result: finalResult, toolCallsUsed };
 }
 
 // ============================================================================
