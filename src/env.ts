@@ -40,8 +40,12 @@ const modelStringSchema = z
 // APIキースキーマ（空文字は未設定として扱う）
 const apiKeySchema = emptyToUndefined;
 
-// ログレベルスキーマ
-const logLevelSchema = z.enum(["error", "warn", "info", "debug"]).default("info");
+// ログレベルスキーマ（大文字/小文字を区別しない）
+const logLevelSchema = z
+  .string()
+  .transform((val) => val.trim().toLowerCase())
+  .pipe(z.enum(["error", "warn", "info", "debug"]))
+  .default("info");
 
 // 正の整数スキーマ（リトライ設定用）
 const positiveIntegerSchema = z

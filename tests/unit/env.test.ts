@@ -166,9 +166,54 @@ describe("env.ts", () => {
       }
     });
 
+    test("大文字のログレベルも受け付ける", () => {
+      process.env.OPENAI_API_KEY = "sk-test";
+      const testCases = [
+        ["ERROR", "error"],
+        ["WARN", "warn"],
+        ["INFO", "info"],
+        ["DEBUG", "debug"],
+      ] as const;
+      for (const [input, expected] of testCases) {
+        process.env.LOG_LEVEL = input;
+        clearEnvCache();
+        const result = validateEnv();
+        expect(result.LOG_LEVEL).toBe(expected);
+      }
+    });
+
+    test("大文字小文字混在も受け付ける", () => {
+      process.env.OPENAI_API_KEY = "sk-test";
+      const testCases = [
+        ["Error", "error"],
+        ["WaRn", "warn"],
+        ["InFo", "info"],
+        ["DeBuG", "debug"],
+      ] as const;
+      for (const [input, expected] of testCases) {
+        process.env.LOG_LEVEL = input;
+        clearEnvCache();
+        const result = validateEnv();
+        expect(result.LOG_LEVEL).toBe(expected);
+      }
+    });
+
+    test("前後の空白をトリムする", () => {
+      process.env.OPENAI_API_KEY = "sk-test";
+      process.env.LOG_LEVEL = "  info  ";
+      const result = validateEnv();
+      expect(result.LOG_LEVEL).toBe("info");
+    });
+
     test("無効なログレベルはエラー", () => {
       process.env.OPENAI_API_KEY = "sk-test";
       process.env.LOG_LEVEL = "invalid";
+      expect(() => validateEnv()).toThrow();
+    });
+
+    test("大文字でも無効な値はエラー", () => {
+      process.env.OPENAI_API_KEY = "sk-test";
+      process.env.LOG_LEVEL = "INVALID";
       expect(() => validateEnv()).toThrow();
     });
 
