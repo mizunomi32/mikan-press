@@ -9,7 +9,6 @@
 import type { AIMessage, BaseMessage } from "@langchain/core/messages";
 import { ToolMessage } from "@langchain/core/messages";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
-import { StructuredTool } from "@langchain/core/tools";
 import type { StructuredToolInterface } from "@langchain/core/tools";
 import type { z } from "zod";
 import { type AgentRole, createModel, getProvider, getRetryConfig } from "@/config.js";
