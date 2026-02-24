@@ -5,6 +5,7 @@ import { getEnv, validateEnv } from "@/env.js";
 import { AgentError } from "@/errors/index.js";
 import { buildGraph } from "@/graph.js";
 import { logger } from "@/logger.js";
+import { formatContent, type OutputFormat } from "@/utils/formatters.js";
 
 // 起動時に環境変数をバリデーション
 try {
@@ -28,6 +29,7 @@ program
   .option("--max-retries-per-agent <number>", "各エージェントの最大やり直し回数")
   .option("--skip-research", "リサーチフェーズをスキップ")
   .option("-o, --output <path>", "出力ファイルパス")
+  .option("-f, --format <format>", "出力フォーマット (markdown|html|json|text)", "markdown")
   .action(
     async (options: {
       topic: string;
@@ -35,8 +37,18 @@ program
       maxRetriesPerAgent?: string;
       skipResearch?: boolean;
       output?: string;
+      format?: string;
     }) => {
-      const { topic, maxReviews, maxRetriesPerAgent, skipResearch, output } = options;
+      const { topic, maxReviews, maxRetriesPerAgent, skipResearch, output, format } = options;
+
+      // 出力フォーマットのバリデーション
+      const validFormats: OutputFormat[] = ["markdown", "html", "json", "text"];
+      if (!format || !validFormats.includes(format as OutputFormat)) {
+        logger.error(`無効なフォーマットです: ${format}`);
+        logger.error(`有効なフォーマット: ${validFormats.join(", ")}`);
+        process.exit(1);
+      }
+      const outputFormat = format as OutputFormat;
 
       // 環境変数からデフォルト値を取得（CLI > 環境変数 > デフォルト値の優先順位）
       const env = getEnv();
@@ -78,13 +90,17 @@ program
         });
 
         logger.info("\n✅ 記事生成が完了しました\n");
+        logger.info(`   出力フォーマット: ${outputFormat}`);
+
+        // 指定されたフォーマットに変換
+        const formattedContent = formatContent(result.finalArticle, outputFormat);
 
         if (output) {
-          writeFileSync(output, result.finalArticle, "utf-8");
+          writeFileSync(output, formattedContent, "utf-8");
           logger.info(`📄 出力先: ${output}\n`);
         } else {
           console.log("---\n");
-          console.log(result.finalArticle);
+          console.log(formattedContent);
           console.log("\n---");
         }
       } catch (error) {
