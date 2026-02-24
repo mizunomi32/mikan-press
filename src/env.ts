@@ -26,13 +26,16 @@ const emptyToUndefined = z.string().transform((val) => (val.trim() === "" ? unde
 const modelStringSchema = z
   .string()
   .transform((val) => (val.trim() === "" ? undefined : val))
-  .refine((val) => {
-    if (val === undefined) return true; // 空文字/undefinedはスキップ（デフォルト値が使われる）
+  .superRefine((val, ctx) => {
+    if (val === undefined) return; // 空文字/undefinedはスキップ（デフォルト値が使われる）
     const { provider } = parseModelString(val);
-    return VALID_PROVIDERS.includes(provider as (typeof VALID_PROVIDERS)[number]);
-  }, (val) => ({
-    message: `Invalid provider in "${val}". Valid providers: ${VALID_PROVIDERS.join(", ")}`,
-  }));
+    if (!VALID_PROVIDERS.includes(provider as (typeof VALID_PROVIDERS)[number])) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Invalid provider in "${val}". Valid providers: ${VALID_PROVIDERS.join(", ")}`,
+      });
+    }
+  });
 
 // APIキースキーマ（空文字は未設定として扱う）
 const apiKeySchema = emptyToUndefined;
