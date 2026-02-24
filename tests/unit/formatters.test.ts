@@ -96,9 +96,7 @@ describe("formatters.ts", () => {
       const result = toJson(input);
       const parsed = JSON.parse(result);
 
-      const paragraphSection = parsed.sections.find(
-        (s: { type: string }) => s.type === "paragraph",
-      );
+      const paragraphSection = parsed.sections.find((s: { type: string }) => s.type === "paragraph");
       expect(paragraphSection).toBeDefined();
       expect(paragraphSection.content).toBe("This is a paragraph.");
     });
