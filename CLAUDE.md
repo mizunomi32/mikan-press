@@ -59,3 +59,5 @@ START → Researcher ⇄ Planner ⇄ Writer ⇄ Editor ⇄ Reviewer → END
 - `OPENAI_API_KEY`, `GOOGLE_API_KEY`, `OPENROUTER_API_KEY` - プロバイダー別APIキー
 - `RESEARCHER_MODEL`, `PLANNER_MODEL`, `WRITER_MODEL`, `EDITOR_MODEL`, `REVIEWER_MODEL` - エージェント別モデル指定
 - `LOG_LEVEL` - ログレベル（error/warn/info/debug）
+- `MAX_RETRIES_PER_AGENT` - 各エージェントの最大自己リトライ回数（デフォルト: 3）
+- `MAX_REVIEWS` - 最大レビュー回数（デフォルト: 3）

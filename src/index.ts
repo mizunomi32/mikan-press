@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { writeFileSync } from "node:fs";
 import { Command } from "commander";
-import { validateEnv } from "@/env.js";
+import { getEnv, validateEnv } from "@/env.js";
 import { AgentError } from "@/errors/index.js";
 import { buildGraph } from "@/graph.js";
 import { logger } from "@/logger.js";
@@ -24,24 +24,33 @@ program
   .command("generate")
   .description("記事を生成する")
   .requiredOption("-t, --topic <topic>", "記事のトピック")
-  .option("-r, --max-reviews <number>", "最大レビュー回数", "3")
-  .option("--max-retries-per-agent <number>", "各エージェントの最大やり直し回数", "1")
+  .option("-r, --max-reviews <number>", "最大レビュー回数")
+  .option("--max-retries-per-agent <number>", "各エージェントの最大やり直し回数")
   .option("--skip-research", "リサーチフェーズをスキップ")
   .option("-o, --output <path>", "出力ファイルパス")
   .action(
     async (options: {
       topic: string;
-      maxReviews: string;
+      maxReviews?: string;
       maxRetriesPerAgent?: string;
       skipResearch?: boolean;
       output?: string;
     }) => {
       const { topic, maxReviews, maxRetriesPerAgent, skipResearch, output } = options;
 
+      // 環境変数からデフォルト値を取得（CLI > 環境変数 > デフォルト値の優先順位）
+      const env = getEnv();
+      const finalMaxReviews =
+        maxReviews !== undefined ? Number.parseInt(maxReviews, 10) : env.MAX_REVIEWS;
+      const finalMaxRetriesPerAgent =
+        maxRetriesPerAgent !== undefined
+          ? Number.parseInt(maxRetriesPerAgent, 10)
+          : env.MAX_RETRIES_PER_AGENT;
+
       logger.info(`\n📝 記事生成を開始します`);
       logger.info(`   トピック: ${topic}`);
-      logger.info(`   最大レビュー回数: ${maxReviews}`);
-      logger.info(`   各エージェント最大やり直し: ${maxRetriesPerAgent ?? "1"}回`);
+      logger.info(`   最大レビュー回数: ${finalMaxReviews}`);
+      logger.info(`   各エージェント最大やり直し: ${finalMaxRetriesPerAgent}回`);
       if (skipResearch) logger.info(`   リサーチ: スキップ`);
       logger.info("");
 
@@ -50,8 +59,8 @@ program
       try {
         const result = await graph.invoke({
           topic,
-          maxReviews: parseInt(maxReviews, 10),
-          maxRetriesPerAgent: parseInt(maxRetriesPerAgent ?? "1", 10),
+          maxReviews: finalMaxReviews,
+          maxRetriesPerAgent: finalMaxRetriesPerAgent,
           skipResearch: !!skipResearch,
           reviewCount: 0,
           research: "",

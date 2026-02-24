@@ -43,6 +43,22 @@ const apiKeySchema = emptyToUndefined;
 // ログレベルスキーマ
 const logLevelSchema = z.enum(["error", "warn", "info", "debug"]).default("info");
 
+// 正の整数スキーマ（リトライ設定用）
+const positiveIntegerSchema = z
+  .string()
+  .transform((val) => (val.trim() === "" ? undefined : val))
+  .superRefine((val, ctx) => {
+    if (val === undefined) return;
+    const num = Number.parseInt(val, 10);
+    if (Number.isNaN(num) || num <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `"${val}" is not a valid positive integer`,
+      });
+    }
+  })
+  .transform((val) => (val === undefined ? undefined : Number.parseInt(val, 10)));
+
 // 環境変数の基底スキーマ
 const envBaseSchema = z.object({
   // APIキー（条件付き必須）
@@ -63,6 +79,10 @@ const envBaseSchema = z.object({
 
   // ログレベル
   LOG_LEVEL: logLevelSchema,
+
+  // リトライ・レビュー設定（任意、デフォルト値あり）
+  MAX_RETRIES_PER_AGENT: positiveIntegerSchema.default(3),
+  MAX_REVIEWS: positiveIntegerSchema.default(3),
 });
 
 // APIキーが少なくとも1つ必要という条件を追加
