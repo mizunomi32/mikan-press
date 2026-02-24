@@ -1,5 +1,7 @@
 # mikan-press
 
+![CI](https://github.com/mizunomi32/mikan-press/actions/workflows/ci.yml/badge.svg)
+
 LangChain.js + LangGraph.js による記事執筆AIエージェント。
 
 複数のAIエージェントが協調して、リサーチからレビューまでの記事執筆プロセスを自動化します。
