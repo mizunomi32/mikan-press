@@ -5,7 +5,6 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { z } from "zod";
 import {
   editorInputSchema,
   plannerInputSchema,
@@ -123,7 +122,13 @@ describe("validatePromptInput", () => {
     test("有効な入力を受け入れる", () => {
       const result = validatePromptInput(
         writerRevisionInputSchema,
-        { topic: "テスト", research: "リサーチ", outline: "アウトライン", draft: "原稿", review: "レビュー" },
+        {
+          topic: "テスト",
+          research: "リサーチ",
+          outline: "アウトライン",
+          draft: "原稿",
+          review: "レビュー",
+        },
         "Writer",
       );
       expect(result.topic).toBe("テスト");
@@ -180,7 +185,14 @@ describe("validatePromptInput", () => {
     test("reviewCountとmaxReviewsを指定可能", () => {
       const result = validatePromptInput(
         reviewerInputSchema,
-        { topic: "テスト", outline: "アウトライン", draft: "原稿", editedDraft: "編集済み", reviewCount: 2, maxReviews: 5 },
+        {
+          topic: "テスト",
+          outline: "アウトライン",
+          draft: "原稿",
+          editedDraft: "編集済み",
+          reviewCount: 2,
+          maxReviews: 5,
+        },
         "Reviewer",
       );
       expect(result.reviewCount).toBe(2);

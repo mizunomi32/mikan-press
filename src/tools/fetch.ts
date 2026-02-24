@@ -150,7 +150,7 @@ export class WebFetchTool extends StructuredTool {
    */
   private extractTitle(html: string): string {
     const titleMatch = /<title[^>]*>([^<]*)<\/title>/i.exec(html);
-    if (titleMatch && titleMatch[1]) {
+    if (titleMatch?.[1]) {
       return this.cleanText(titleMatch[1]);
     }
     return "";
@@ -170,21 +170,21 @@ export class WebFetchTool extends StructuredTool {
     maxLength: number,
   ): { text: string; fullLength: number; truncated: boolean } {
     // まずノイズを除去
-    let cleanedHtml = this.removeNoise(html);
+    const cleanedHtml = this.removeNoise(html);
 
     // 本文コンテナを探す（優先順位順）
     let content = "";
 
     // 1. <article>タグを探す
     const articleMatch = /<article[^>]*>([\s\S]*?)<\/article>/i.exec(cleanedHtml);
-    if (articleMatch && articleMatch[1]) {
+    if (articleMatch?.[1]) {
       content = articleMatch[1];
     }
 
     // 2. <main>タグを探す
     if (!content) {
       const mainMatch = /<main[^>]*>([\s\S]*?)<\/main>/i.exec(cleanedHtml);
-      if (mainMatch && mainMatch[1]) {
+      if (mainMatch?.[1]) {
         content = mainMatch[1];
       }
     }
@@ -195,7 +195,7 @@ export class WebFetchTool extends StructuredTool {
         /<div[^>]*class="[^"]*(?:content|post|article|entry)[^"]*"[^>]*>([\s\S]*?)<\/div>/i.exec(
           cleanedHtml,
         );
-      if (contentDivMatch && contentDivMatch[1]) {
+      if (contentDivMatch?.[1]) {
         content = contentDivMatch[1];
       }
     }
@@ -203,7 +203,7 @@ export class WebFetchTool extends StructuredTool {
     // 4. <body>タグから抽出
     if (!content) {
       const bodyMatch = /<body[^>]*>([\s\S]*?)<\/body>/i.exec(cleanedHtml);
-      if (bodyMatch && bodyMatch[1]) {
+      if (bodyMatch?.[1]) {
         content = bodyMatch[1];
       }
     }
@@ -218,7 +218,12 @@ export class WebFetchTool extends StructuredTool {
     if (truncated) {
       text = text.substring(0, maxLength);
       // 文の途中で切れないよう、最後の句点やピリオドで調整
-      const lastPeriod = Math.max(text.lastIndexOf("。"), text.lastIndexOf("."), text.lastIndexOf("！"), text.lastIndexOf("?"));
+      const lastPeriod = Math.max(
+        text.lastIndexOf("。"),
+        text.lastIndexOf("."),
+        text.lastIndexOf("！"),
+        text.lastIndexOf("?"),
+      );
       if (lastPeriod > maxLength * 0.8) {
         text = text.substring(0, lastPeriod + 1);
       }
@@ -266,9 +271,7 @@ export class WebFetchTool extends StructuredTool {
       .replace(/&apos;/g, "'")
       .replace(/&#39;/g, "'")
       .replace(/&#(\d+);/g, (_, num) => String.fromCharCode(Number.parseInt(num, 10)))
-      .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) =>
-        String.fromCharCode(Number.parseInt(hex, 16)),
-      )
+      .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)))
       .replace(/\s+/g, " ") // 連続空白を1つに
       .trim();
   }

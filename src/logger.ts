@@ -1,5 +1,5 @@
-import type { AgentError } from "@/errors/index.js";
 import { getEnv } from "@/env.js";
+import type { AgentError } from "@/errors/index.js";
 
 const LOG_LEVELS = ["error", "warn", "info", "debug"] as const;
 type LogLevel = (typeof LOG_LEVELS)[number];
@@ -97,7 +97,13 @@ export class Logger {
    * @param error - エラーオブジェクト
    * @param delayMs - 待機時間（ミリ秒）
    */
-  retry(agentName: string, attempt: number, maxRetries: number, error: Error, delayMs: number): void {
+  retry(
+    agentName: string,
+    attempt: number,
+    maxRetries: number,
+    error: Error,
+    delayMs: number,
+  ): void {
     this.warn(`[${agentName}] リトライ ${attempt}/${maxRetries}: ${error.message}`);
     this.info(`[${agentName}] ${(delayMs / 1000).toFixed(1)}秒待機中...`);
   }

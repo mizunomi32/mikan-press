@@ -48,8 +48,16 @@ export class TextStatsTool extends StructuredTool {
             error: "テキストが空です",
             characterCount: { total: 0, withoutSpaces: 0, japaneseOnly: 0 },
             readingTime: { minutes: 0, seconds: 0, formatted: "約0分" },
-            structure: { headings: { h1: 0, h2: 0, h3: 0, h4: 0, h5: 0, h6: 0, total: 0 }, paragraphs: 0, sentences: 0 },
-            quality: { avgSentenceLength: 0, headingDensity: "none", recommendation: "テキストがありません" },
+            structure: {
+              headings: { h1: 0, h2: 0, h3: 0, h4: 0, h5: 0, h6: 0, total: 0 },
+              paragraphs: 0,
+              sentences: 0,
+            },
+            quality: {
+              avgSentenceLength: 0,
+              headingDensity: "none",
+              recommendation: "テキストがありません",
+            },
           },
           null,
           2,
@@ -57,7 +65,9 @@ export class TextStatsTool extends StructuredTool {
       }
 
       const characterCount = this.calculateCharacterCount(text);
-      const readingTime = this.calculateReadingTime(characterCount.japaneseOnly || characterCount.withoutSpaces);
+      const readingTime = this.calculateReadingTime(
+        characterCount.japaneseOnly || characterCount.withoutSpaces,
+      );
       const structure = this.analyzeStructure(text);
       const quality = this.evaluateQuality(characterCount, structure);
 
@@ -239,10 +249,14 @@ export class TextStatsTool extends StructuredTool {
     recommendation: string;
   } {
     // 平均文長（文字数 / 文数）
-    const avgSentenceLength = structure.sentences > 0 ? Math.round(characterCount.withoutSpaces / structure.sentences) : 0;
+    const avgSentenceLength =
+      structure.sentences > 0 ? Math.round(characterCount.withoutSpaces / structure.sentences) : 0;
 
     // 見出し密度（見出し1つあたりの文字数）
-    const charsPerHeading = structure.headings.total > 0 ? Math.round(characterCount.withoutSpaces / structure.headings.total) : Infinity;
+    const charsPerHeading =
+      structure.headings.total > 0
+        ? Math.round(characterCount.withoutSpaces / structure.headings.total)
+        : Infinity;
 
     let headingDensity: "none" | "sparse" | "good" | "dense";
     let recommendation: string;
@@ -255,7 +269,8 @@ export class TextStatsTool extends StructuredTool {
       recommendation = "見出しを増やして、読者が情報を見つけやすくすることを推奨します";
     } else if (charsPerHeading < 200) {
       headingDensity = "dense";
-      recommendation = "見出しが多すぎる可能性があります。関連するセクションを統合することを検討してください";
+      recommendation =
+        "見出しが多すぎる可能性があります。関連するセクションを統合することを検討してください";
     } else {
       headingDensity = "good";
       recommendation = "見出しのバランスが良好です";
@@ -265,7 +280,8 @@ export class TextStatsTool extends StructuredTool {
     if (avgSentenceLength > 60) {
       recommendation += "。また、文が長すぎる傾向があります。短く区切ることを検討してください";
     } else if (avgSentenceLength > 0 && avgSentenceLength < 15) {
-      recommendation += "。また、文が短すぎる傾向があります。内容を充実させることを検討してください";
+      recommendation +=
+        "。また、文が短すぎる傾向があります。内容を充実させることを検討してください";
     }
 
     return {

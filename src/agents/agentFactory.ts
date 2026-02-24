@@ -222,9 +222,9 @@ export async function executeToolEnabledAgentChain<T extends Record<string, unkn
   logger.debug(`[${agentName}] モデル: ${model.constructor.name}`);
 
   // bindToolsはLangChainの標準メソッド。型チェックをバイパス
-  const modelWithTools = (model as unknown as { bindTools: (tools: Tool[]) => typeof model }).bindTools(
-    tools,
-  );
+  const modelWithTools = (
+    model as unknown as { bindTools: (tools: Tool[]) => typeof model }
+  ).bindTools(tools);
   logger.debug(`[${agentName}] ツールバインディング完了: ${tools.map((t) => t.name).join(", ")}`);
 
   // プロンプトをメッセージに変換
@@ -285,8 +285,10 @@ export async function executeToolEnabledAgentChain<T extends Record<string, unkn
 
         try {
           const toolResult = await tool.invoke(toolArgs);
-          const resultStr = typeof toolResult === "string" ? toolResult : JSON.stringify(toolResult);
-          const truncatedResult = resultStr.length > 300 ? `${resultStr.slice(0, 300)}...` : resultStr;
+          const resultStr =
+            typeof toolResult === "string" ? toolResult : JSON.stringify(toolResult);
+          const truncatedResult =
+            resultStr.length > 300 ? `${resultStr.slice(0, 300)}...` : resultStr;
           logger.info(`[${agentName}]   ← ${toolName}: ${truncatedResult}`);
 
           messages.push(
@@ -635,9 +637,7 @@ export function createToolEnabledAgent<
 
     // ツール使用状況のログ
     if (tools.length > 0 && !toolCallsUsed) {
-      logger.warn(
-        `[${name}] ツールが指定されていますが、モデルはツールを呼び出しませんでした。`,
-      );
+      logger.warn(`[${name}] ツールが指定されていますが、モデルはツールを呼び出しませんでした。`);
     }
 
     // Researcherエージェント特別処理: ツールが使われず出力が短すぎる場合はRETRY

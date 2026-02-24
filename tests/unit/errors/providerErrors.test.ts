@@ -1,18 +1,14 @@
 import { describe, expect, it } from "bun:test";
 import {
-  classifyError,
-  isRetryableError,
-  getResolutionHint,
-} from "@/errors/providerErrors.js";
-import {
   AgentError,
-  ErrorSeverity,
-  RateLimitError,
   AuthenticationError,
+  ErrorSeverity,
   ModelNotFoundError,
   NetworkError,
+  RateLimitError,
   TimeoutError,
 } from "@/errors/index.js";
+import { classifyError, getResolutionHint, isRetryableError } from "@/errors/providerErrors.js";
 
 describe("providerErrors", () => {
   describe("classifyError - OpenAI", () => {
