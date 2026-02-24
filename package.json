@@ -19,7 +19,6 @@
     "check": "biome check --write ."
   },
   "dependencies": {
-    "@langchain/community": "^1.1.17",
     "@langchain/core": "^1.1.27",
     "@langchain/google-genai": "^2.1.20",
     "@langchain/langgraph": "^1.1.5",

@@ -1,4 +1,3 @@
-import type { Tool } from "@langchain/core/tools";
 import {
   createToolEnabledAgent,
   type RevisionConfig,
@@ -43,7 +42,7 @@ const config: ToolEnabledAgentConfig<WriterInput, "writerRetryCount", typeof wri
   retryKey: "writerRetryCount",
   completionMessage: "初稿完了",
   revisionConfig,
-  tools: [dateTimeTool as unknown as Tool],
+  tools: [dateTimeTool],
 };
 
 export const writerNode = createToolEnabledAgent(config);

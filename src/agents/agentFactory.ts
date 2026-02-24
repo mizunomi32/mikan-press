@@ -9,7 +9,8 @@
 import type { AIMessage, BaseMessage } from "@langchain/core/messages";
 import { ToolMessage } from "@langchain/core/messages";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
-import type { Tool } from "@langchain/core/tools";
+import { StructuredTool } from "@langchain/core/tools";
+import type { StructuredToolInterface } from "@langchain/core/tools";
 import type { z } from "zod";
 import { type AgentRole, createModel, getProvider, getRetryConfig } from "@/config.js";
 import { AgentError } from "@/errors/index.js";
@@ -83,7 +84,7 @@ export interface ToolEnabledAgentConfig<
   TInputSchema extends z.ZodType,
 > extends AgentConfig<TInput, TRetryKey, TInputSchema> {
   /** 使用可能なツール配列（オプション） */
-  tools?: Tool[];
+  tools?: StructuredToolInterface[];
   /** 最小出力文字数（下回ればRETRY） */
   minOutputLength?: number;
   /** ツール使用を必須とするか */
@@ -217,7 +218,7 @@ export async function executeToolEnabledAgentChain<T extends Record<string, unkn
   modelType: AgentRole,
   prompt: ChatPromptTemplate,
   input: T,
-  tools: Tool[],
+  tools: StructuredToolInterface[],
 ): Promise<{ result: AIMessage; toolCallsUsed: boolean }> {
   const model = createModel(modelType);
   const provider = getProvider(modelType);
@@ -227,7 +228,7 @@ export async function executeToolEnabledAgentChain<T extends Record<string, unkn
 
   // bindToolsはLangChainの標準メソッド。型チェックをバイパス
   const modelWithTools = (
-    model as unknown as { bindTools: (tools: Tool[]) => typeof model }
+    model as unknown as { bindTools: (tools: StructuredToolInterface[]) => typeof model }
   ).bindTools(tools);
   logger.debug(`[${agentName}] ツールバインディング完了: ${tools.map((t) => t.name).join(", ")}`);
 

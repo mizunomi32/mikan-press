@@ -1,4 +1,3 @@
-import type { Tool } from "@langchain/core/tools";
 import { createToolEnabledAgent, type ToolEnabledAgentConfig } from "@/agents/agentFactory.js";
 import { logger } from "@/logger.js";
 import { getHumanPrompt, getSystemPrompt } from "@/prompts/loader.js";
@@ -58,7 +57,7 @@ const fallbackConfig: ToolEnabledAgentConfig<
     research: "（リサーチスキップ）",
     status: "planning",
   },
-  tools: [webSearchTool as unknown as Tool, webFetchTool as unknown as Tool],
+  tools: [webSearchTool, webFetchTool],
   minOutputLength: 300,
   requireToolUse: true,
 };
@@ -103,7 +102,7 @@ export async function createResearcherNode(
       research: "（リサーチスキップ）",
       status: "planning",
     },
-    tools: [webSearchTool as unknown as Tool, webFetchTool as unknown as Tool],
+    tools: [webSearchTool, webFetchTool],
     minOutputLength: 300,
     requireToolUse: true,
   };
