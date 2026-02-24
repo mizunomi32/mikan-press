@@ -19,7 +19,4 @@ export const ArticleState = Annotation.Root({
   plannerRetryCount: Annotation<number>,
   writerRetryCount: Annotation<number>,
   editorRetryCount: Annotation<number>,
-  // Web検索関連
-  searchResults: Annotation<string>,
-  searchQueries: Annotation<string[]>,
 });
