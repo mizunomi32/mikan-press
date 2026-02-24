@@ -1,0 +1,13 @@
+# Copy files and directories from origin repository to worktree
+[copy]
+files = [".env"]
+dirs = ["node_modules", ".serena"]
+
+# Commands to run after worktree creation
+[hooks]
+pre_start = ["echo 'Preparing worktree...'"]
+post_start = [
+  "bun install"
+]
+pre_clean = ["git stash"]
+post_clean = ["echo 'Cleanup complete'"]
