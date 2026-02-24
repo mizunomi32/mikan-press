@@ -1,7 +1,7 @@
 # Copy files and directories from origin repository to worktree
 [copy]
 files = [".env"]
-dirs = ["node_modules", ".serena"]
+dirs = ["node_modules", ".serena", ".claude"]
 
 # Commands to run after worktree creation
 [hooks]
