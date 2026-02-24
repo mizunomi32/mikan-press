@@ -86,12 +86,17 @@ export class DateTimeTool extends StructuredTool {
     // ISO形式
     const iso = now.toISOString();
 
-    // タイムゾーンを考慮したフォーマット
-    const formatter = new Intl.DateTimeFormat("ja-JP", {
+    // 日本語フォーマット用（曜日なし）
+    const formatterDate = new Intl.DateTimeFormat("ja-JP", {
       timeZone: timezone,
       year: "numeric",
       month: "long",
       day: "numeric",
+    });
+
+    // 曜日用
+    const formatterWeekday = new Intl.DateTimeFormat("ja-JP", {
+      timeZone: timezone,
       weekday: "long",
     });
 
@@ -103,25 +108,20 @@ export class DateTimeTool extends StructuredTool {
     });
 
     // 各パーツを取得
-    const parts = formatter.formatToParts(now);
     const partsShort = formatterShort.formatToParts(now);
-
-    const _year = parts.find((p) => p.type === "year")?.value ?? "";
-    const _month = parts.find((p) => p.type === "month")?.value ?? "";
-    const _day = parts.find((p) => p.type === "day")?.value ?? "";
-    const weekday = parts.find((p) => p.type === "weekday")?.value ?? "";
 
     const yearShort = partsShort.find((p) => p.type === "year")?.value ?? "";
     const monthShort = partsShort.find((p) => p.type === "month")?.value ?? "";
     const dayShort = partsShort.find((p) => p.type === "day")?.value ?? "";
 
-    // 日本語フォーマット（2024年2月24日） - format()を使用して正しい形式を取得
-    const fullFormatted = formatter.format(now);
-    // "2024年2月24日 火曜日" から日付部分だけを抽出
-    const formatted = fullFormatted.split(" ")[0] ?? fullFormatted;
+    // 日本語フォーマット（2024年2月24日）
+    const formatted = formatterDate.format(now);
 
     // 短いフォーマット（2024-02-24）
     const formattedShort = `${yearShort}-${monthShort.padStart(2, "0")}-${dayShort.padStart(2, "0")}`;
+
+    // 曜日
+    const weekday = formatterWeekday.format(now);
 
     return JSON.stringify(
       {
