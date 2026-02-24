@@ -7,6 +7,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { clearPromptCache, loadPrompt } from "@/prompts/reader.js";
 
+// テスト用の環境変数を設定（環境変数検証を回避）
+process.env.OPENAI_API_KEY = "test-key-for-ci";
+
 // テスト用のプロンプトディレクトリ
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
