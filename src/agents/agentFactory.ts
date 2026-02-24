@@ -84,6 +84,10 @@ export interface ToolEnabledAgentConfig<
 > extends AgentConfig<TInput, TRetryKey, TInputSchema> {
   /** 使用可能なツール配列（オプション） */
   tools?: Tool[];
+  /** 最小出力文字数（下回ればRETRY） */
+  minOutputLength?: number;
+  /** ツール使用を必須とするか */
+  requireToolUse?: boolean;
 }
 
 /**
@@ -556,6 +560,8 @@ export function createToolEnabledAgent<
     skipResponse,
     revisionConfig,
     tools = [],
+    minOutputLength = 0,
+    requireToolUse = false,
   } = config;
 
   // 改稿用プロンプトの事前構築（設定がある場合）
@@ -640,9 +646,15 @@ export function createToolEnabledAgent<
       logger.warn(`[${name}] ツールが指定されていますが、モデルはツールを呼び出しませんでした。`);
     }
 
-    // Researcherエージェント特別処理: ツールが使われず出力が短すぎる場合はRETRY
+    // 設定ベースの強制RETRY判定: ツールが使われず出力が短すぎる場合はRETRY
     let forceRetry = false;
-    if (name === "Researcher" && !toolCallsUsed && tools.length > 0 && content.length < 300) {
+    if (
+      requireToolUse &&
+      !toolCallsUsed &&
+      tools.length > 0 &&
+      minOutputLength > 0 &&
+      content.length < minOutputLength
+    ) {
       logger.warn(
         `[${name}] 出力が短すぎます（${content.length}文字）。ツール対応モデルの使用を推奨します。`,
       );

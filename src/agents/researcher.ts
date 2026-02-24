@@ -26,6 +26,9 @@ const config: ToolEnabledAgentConfig<
     status: "planning",
   },
   tools: [webSearchTool as unknown as Tool, webFetchTool as unknown as Tool],
+  // ツール使用を必須とし、出力が300文字未満の場合はRETRY
+  minOutputLength: 300,
+  requireToolUse: true,
 };
 
 export const researcherNode = createToolEnabledAgent(config);
