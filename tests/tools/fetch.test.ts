@@ -4,12 +4,14 @@
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { WebFetchTool } from "@/tools/fetch.js";
+import { resetFetchCache } from "@/utils/cache.js";
 
 describe("WebFetchTool", () => {
   let tool: WebFetchTool;
 
   beforeEach(() => {
     tool = new WebFetchTool();
+    resetFetchCache(); // キャッシュをリセット
   });
 
   describe("ツール定義", () => {
@@ -62,9 +64,9 @@ describe("WebFetchTool", () => {
         statusText: "OK",
         headers: new Headers({ "content-type": "text/html" }),
         text: async () => mockHtml,
-      };
+      } as Response;
 
-      global.fetch = mock(() => Promise.resolve(mockResponse as Response));
+      global.fetch = mock(() => Promise.resolve(mockResponse));
 
       const result = await tool._call({ url: "https://example.com" });
       const parsed = JSON.parse(result);
@@ -90,9 +92,9 @@ describe("WebFetchTool", () => {
         statusText: "OK",
         headers: new Headers({ "content-type": "text/html" }),
         text: async () => mockHtml,
-      };
+      } as Response;
 
-      global.fetch = mock(() => Promise.resolve(mockResponse as Response));
+      global.fetch = mock(() => Promise.resolve(mockResponse));
 
       const result = await tool._call({ url: "https://example.com", maxLength: 100 });
       const parsed = JSON.parse(result);
@@ -120,9 +122,9 @@ describe("WebFetchTool", () => {
         statusText: "OK",
         headers: new Headers({ "content-type": "text/html; charset=utf-8" }),
         text: async () => mockHtml,
-      };
+      } as Response;
 
-      global.fetch = mock(() => Promise.resolve(mockResponse as Response));
+      global.fetch = mock(() => Promise.resolve(mockResponse));
 
       const result = await tool._call({ url: "https://example.jp" });
       const parsed = JSON.parse(result);
@@ -138,9 +140,10 @@ describe("WebFetchTool", () => {
         ok: false,
         status: 404,
         statusText: "Not Found",
-      };
+        headers: new Headers(),
+      } as Response;
 
-      global.fetch = mock(() => Promise.resolve(mockResponse as Response));
+      global.fetch = mock(() => Promise.resolve(mockResponse));
 
       const result = await tool._call({ url: "https://example.com/notfound" });
       const parsed = JSON.parse(result);
@@ -150,7 +153,7 @@ describe("WebFetchTool", () => {
     });
 
     test("タイムアウト時にエラーメッセージを返す", async () => {
-      const abortError = new Error("Request timeout");
+      const abortError = new Error("The operation was aborted");
       abortError.name = "AbortError";
 
       global.fetch = mock(() => Promise.reject(abortError));
@@ -168,9 +171,9 @@ describe("WebFetchTool", () => {
         statusText: "OK",
         headers: new Headers({ "content-type": "application/pdf" }),
         text: async () => "PDF content",
-      };
+      } as Response;
 
-      global.fetch = mock(() => Promise.resolve(mockResponse as Response));
+      global.fetch = mock(() => Promise.resolve(mockResponse));
 
       const result = await tool._call({ url: "https://example.com/doc.pdf" });
       const parsed = JSON.parse(result);
@@ -192,9 +195,10 @@ describe("WebFetchTool", () => {
         ok: false,
         status: 500,
         statusText: "Internal Server Error",
-      };
+        headers: new Headers(),
+      } as Response;
 
-      global.fetch = mock(() => Promise.resolve(mockResponse as Response));
+      global.fetch = mock(() => Promise.resolve(mockResponse));
 
       const result = await tool._call({ url: "https://example.com" });
       const parsed = JSON.parse(result);
@@ -222,15 +226,15 @@ describe("WebFetchTool", () => {
         statusText: "OK",
         headers: new Headers({ "content-type": "text/html" }),
         text: async () => mockHtml,
-      };
+      } as Response;
 
-      global.fetch = mock(() => Promise.resolve(mockResponse as Response));
+      global.fetch = mock(() => Promise.resolve(mockResponse));
 
       const result = await tool._call({ url: "https://example.com" });
       const parsed = JSON.parse(result);
 
       expect(parsed.content).not.toContain("console.log");
-      expect(parsed.content).toContain("Valid content");
+      expect(parsed.content).toContain("Valid content here");
     });
 
     test("styleタグが除去される", async () => {
@@ -250,9 +254,9 @@ describe("WebFetchTool", () => {
         statusText: "OK",
         headers: new Headers({ "content-type": "text/html" }),
         text: async () => mockHtml,
-      };
+      } as Response;
 
-      global.fetch = mock(() => Promise.resolve(mockResponse as Response));
+      global.fetch = mock(() => Promise.resolve(mockResponse));
 
       const result = await tool._call({ url: "https://example.com" });
       const parsed = JSON.parse(result);
@@ -278,9 +282,9 @@ describe("WebFetchTool", () => {
         statusText: "OK",
         headers: new Headers({ "content-type": "text/html" }),
         text: async () => mockHtml,
-      };
+      } as Response;
 
-      global.fetch = mock(() => Promise.resolve(mockResponse as Response));
+      global.fetch = mock(() => Promise.resolve(mockResponse));
 
       const result = await tool._call({ url: "https://example.com" });
       const parsed = JSON.parse(result);
@@ -308,9 +312,9 @@ describe("WebFetchTool", () => {
         statusText: "OK",
         headers: new Headers({ "content-type": "text/html" }),
         text: async () => mockHtml,
-      };
+      } as Response;
 
-      global.fetch = mock(() => Promise.resolve(mockResponse as Response));
+      global.fetch = mock(() => Promise.resolve(mockResponse));
 
       const result = await tool._call({ url: "https://example.com" });
       const parsed = JSON.parse(result);
@@ -336,9 +340,9 @@ describe("WebFetchTool", () => {
         statusText: "OK",
         headers: new Headers({ "content-type": "text/html" }),
         text: async () => mockHtml,
-      };
+      } as Response;
 
-      global.fetch = mock(() => Promise.resolve(mockResponse as Response));
+      global.fetch = mock(() => Promise.resolve(mockResponse));
 
       const result = await tool._call({ url: "https://example.com" });
       const parsed = JSON.parse(result);
@@ -363,9 +367,9 @@ describe("WebFetchTool", () => {
         statusText: "OK",
         headers: new Headers({ "content-type": "text/html" }),
         text: async () => mockHtml,
-      };
+      } as Response;
 
-      global.fetch = mock(() => Promise.resolve(mockResponse as Response));
+      global.fetch = mock(() => Promise.resolve(mockResponse));
 
       const result = await tool._call({ url: "https://example.com" });
       const parsed = JSON.parse(result);
