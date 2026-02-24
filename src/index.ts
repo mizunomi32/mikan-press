@@ -2,6 +2,7 @@ import "dotenv/config";
 import { writeFileSync } from "node:fs";
 import { Command } from "commander";
 import { validateEnv } from "@/env.js";
+import { AgentError } from "@/errors/index.js";
 import { buildGraph } from "@/graph.js";
 import { logger } from "@/logger.js";
 
@@ -46,37 +47,100 @@ program
 
       const graph = buildGraph();
 
-      const result = await graph.invoke({
-        topic,
-        maxReviews: parseInt(maxReviews, 10),
-        maxRetriesPerAgent: parseInt(maxRetriesPerAgent ?? "1", 10),
-        skipResearch: !!skipResearch,
-        reviewCount: 0,
-        research: "",
-        outline: "",
-        draft: "",
-        editedDraft: "",
-        review: "",
-        finalArticle: "",
-        status: "researching" as const,
-        needRetry: false,
-        researcherRetryCount: 0,
-        plannerRetryCount: 0,
-        writerRetryCount: 0,
-        editorRetryCount: 0,
-      });
+      try {
+        const result = await graph.invoke({
+          topic,
+          maxReviews: parseInt(maxReviews, 10),
+          maxRetriesPerAgent: parseInt(maxRetriesPerAgent ?? "1", 10),
+          skipResearch: !!skipResearch,
+          reviewCount: 0,
+          research: "",
+          outline: "",
+          draft: "",
+          editedDraft: "",
+          review: "",
+          finalArticle: "",
+          status: "researching" as const,
+          needRetry: false,
+          researcherRetryCount: 0,
+          plannerRetryCount: 0,
+          writerRetryCount: 0,
+          editorRetryCount: 0,
+        });
 
-      logger.info("\n✅ 記事生成が完了しました\n");
+        logger.info("\n✅ 記事生成が完了しました\n");
 
-      if (output) {
-        writeFileSync(output, result.finalArticle, "utf-8");
-        logger.info(`📄 出力先: ${output}\n`);
-      } else {
-        console.log("---\n");
-        console.log(result.finalArticle);
-        console.log("\n---");
+        if (output) {
+          writeFileSync(output, result.finalArticle, "utf-8");
+          logger.info(`📄 出力先: ${output}\n`);
+        } else {
+          console.log("---\n");
+          console.log(result.finalArticle);
+          console.log("\n---");
+        }
+      } catch (error) {
+        handleCliError(error);
+        process.exit(1);
       }
     },
   );
+
+/**
+ * CLIエラーハンドリング関数
+ *
+ * エラー種別に応じたユーザーフレンドリーなメッセージを表示します。
+ */
+function handleCliError(error: unknown): void {
+  if (error instanceof AgentError) {
+    // AgentError の場合は詳細情報を表示
+    logger.error("記事生成中にエラーが発生しました", error);
+  } else if (error instanceof Error) {
+    // 一般的な Error の場合、ユーザーフレンドリーなメッセージに変換
+    const message = getFriendlyErrorMessage(error);
+    logger.error(message);
+  } else {
+    logger.error("予期しないエラーが発生しました");
+  }
+}
+
+/**
+ * 一般的なエラーからユーザーフレンドリーなメッセージを生成
+ */
+function getFriendlyErrorMessage(error: Error): string {
+  const message = error.message.toLowerCase();
+
+  // APIキーエラー
+  if (
+    message.includes("api key") ||
+    message.includes("unauthorized") ||
+    message.includes("401") ||
+    message.includes("invalid api key")
+  ) {
+    return "APIキーが無効です。.env の設定を確認してください";
+  }
+
+  // レート制限
+  if (message.includes("rate limit") || message.includes("429")) {
+    return "APIのレート制限に達しました。時間を置いて再実行してください";
+  }
+
+  // ネットワークエラー
+  if (
+    message.includes("network") ||
+    message.includes("econnrefused") ||
+    message.includes("enotfound") ||
+    message.includes("fetch failed")
+  ) {
+    return "ネットワーク接続を確認してください";
+  }
+
+  // タイムアウト
+  if (message.includes("timeout") || message.includes("etimedout")) {
+    return "リクエストがタイムアウトしました。時間を置いて再実行してください";
+  }
+
+  // その他
+  return `エラーが発生しました: ${error.message}`;
+}
 
 program.parse();
