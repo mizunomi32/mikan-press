@@ -121,7 +121,7 @@ export class WebSearchTool extends StructuredTool {
     // result__snippet クラス: 説明文
 
     const resultPattern =
-      /<div[^>]*class="[^"]*result[^"]*"[^>]*>[\s\S]*?<a[^>]*class="result__a[^"]*"[^>]*>([^<]+)<\/a>[\s\S]*?<a[^>]*class="result__url[^"]*"[^>]*>([^<]+)<\/a>[\s\S]*?<class="[^"]*result__snippet[^"]*"[^>]*>([^<]*(?:<[^>]*>[^<]*<\/[^>]*>[^<]*)*)<\/a>/gi;
+      /<div[^>]*class="[^"]*result[^"]*"[^>]*>[\s\S]*?<a[^>]*class="result__a[^"]*"[^>]*>([^<]+)<\/a>[\s\S]*?<a[^>]*class="result__url[^"]*"[^>]*>([^<]+)<\/a>[\s\S]*?<a[^>]*class="[^"]*result__snippet[^"]*"[^>]*>([^<]*(?:<[^>]*>[^<]*<\/[^>]*>[^<]*)*)<\/a>/gi;
 
     let match: RegExpExecArray | null;
     let count = 0;

@@ -67,15 +67,6 @@ export class Logger {
     }
   }
 
-  /**
-   * 従来のエラーログ（可変長引数）
-   *
-   * @deprecated error(message, error) の使用を推奨
-   */
-  errorLegacy(...args: unknown[]): void {
-    if (this.shouldLog("error")) console.error("[ERROR]", ...args);
-  }
-
   warn(...args: unknown[]): void {
     if (this.shouldLog("warn")) console.warn("[WARN]", ...args);
   }

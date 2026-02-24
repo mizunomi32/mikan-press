@@ -157,6 +157,97 @@ describe("WebSearchTool", () => {
   });
 
   describe("結果のパース", () => {
+    describe("メインパーサー", () => {
+      test("単一検索結果のパース - タイトル、URL、スニペットが正しく抽出される", async () => {
+        const mockResponse = {
+          ok: true,
+          status: 200,
+          statusText: "OK",
+          text: async () =>
+            `
+            <div class="result results_links results_links_deep">
+              <a class="result__a" href="https://example.com/article">Example Article Title</a>
+              <a class="result__url">example.com/article</a>
+              <a class="result__snippet">This is the snippet text for the search result.</a>
+            </div>
+          `,
+        };
+
+        global.fetch = mock(() => Promise.resolve(mockResponse as Response));
+
+        const result = await tool._call({ query: "test query" });
+        const parsed = JSON.parse(result);
+
+        expect(parsed.results.length).toBe(1);
+        expect(parsed.results[0].title).toBe("Example Article Title");
+        expect(parsed.results[0].url).toBe("example.com/article");
+        expect(parsed.results[0].snippet).toBe("This is the snippet text for the search result.");
+      });
+
+      test("複数検索結果のパース - 複数の結果が正しくパースされる", async () => {
+        const mockResponse = {
+          ok: true,
+          status: 200,
+          statusText: "OK",
+          text: async () =>
+            `
+            <div class="result">
+              <a class="result__a" href="https://example1.com">First Result</a>
+              <a class="result__url">example1.com</a>
+              <a class="result__snippet">First snippet.</a>
+            </div>
+            <div class="result">
+              <a class="result__a" href="https://example2.com">Second Result</a>
+              <a class="result__url">example2.com</a>
+              <a class="result__snippet">Second snippet.</a>
+            </div>
+            <div class="result">
+              <a class="result__a" href="https://example3.com">Third Result</a>
+              <a class="result__url">example3.com</a>
+              <a class="result__snippet">Third snippet.</a>
+            </div>
+          `,
+        };
+
+        global.fetch = mock(() => Promise.resolve(mockResponse as Response));
+
+        const result = await tool._call({ query: "test", numResults: 5 });
+        const parsed = JSON.parse(result);
+
+        expect(parsed.results.length).toBe(3);
+        expect(parsed.results[0].title).toBe("First Result");
+        expect(parsed.results[1].title).toBe("Second Result");
+        expect(parsed.results[2].title).toBe("Third Result");
+      });
+
+      test("スニペットにHTMLタグが含まれる場合 - タグが適切に除去される", async () => {
+        const mockResponse = {
+          ok: true,
+          status: 200,
+          statusText: "OK",
+          text: async () =>
+            `
+            <div class="result">
+              <a class="result__a" href="https://example.com">Article with HTML</a>
+              <a class="result__url">example.com</a>
+              <a class="result__snippet">This has <b>bold</b> and <em>italic</em> text.</a>
+            </div>
+          `,
+        };
+
+        global.fetch = mock(() => Promise.resolve(mockResponse as Response));
+
+        const result = await tool._call({ query: "test" });
+        const parsed = JSON.parse(result);
+
+        expect(parsed.results.length).toBe(1);
+        expect(parsed.results[0].snippet).not.toContain("<b>");
+        expect(parsed.results[0].snippet).not.toContain("</b>");
+        expect(parsed.results[0].snippet).not.toContain("<em>");
+        expect(parsed.results[0].snippet).toBe("This has bold and italic text.");
+      });
+    });
+
     test("検索結果が見つからない場合のメッセージを返す", async () => {
       const mockResponse = {
         ok: true,
