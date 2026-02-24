@@ -3,10 +3,23 @@
  *
  * 指定されたURLからWebページの内容を取得し、本文テキストを抽出します。
  * 検索結果のURLから詳細情報を取得するために使用します。
+ *
+ * 機能:
+ * - キャッシュによる重複リクエストの回避
+ * - タイムアウト制御（30秒）
+ * - HTMLノイズ除去
+ * - 本文テキスト抽出
  */
 
 import { StructuredTool } from "@langchain/core/tools";
 import { z } from "zod";
+import { getFetchCache } from "@/utils/cache.js";
+
+// キャッシュインスタンスを取得
+const fetchCache = getFetchCache({
+  ttl: 5 * 60 * 1000, // 5分
+  maxSize: 50, // 最大50件
+});
 
 // WebFetchの入力スキーマ
 const webFetchInputSchema = z.object({
@@ -37,6 +50,15 @@ export class WebFetchTool extends StructuredTool {
    */
   async _call(input: z.infer<typeof webFetchInputSchema>): Promise<string> {
     const { url, maxLength = 5000 } = input;
+
+    // キャッシュキーを生成
+    const cacheKey = `${url}:${maxLength}`;
+
+    // キャッシュをチェック
+    const cachedResult = fetchCache.get(cacheKey);
+    if (cachedResult) {
+      return cachedResult;
+    }
 
     try {
       const response = await fetch(url, {
@@ -96,17 +118,23 @@ export class WebFetchTool extends StructuredTool {
       // HTMLから本文抽出
       const content = this.extractContent(html, maxLength);
 
-      return JSON.stringify(
+      const result = JSON.stringify(
         {
           url,
           title,
           contentLength: content.fullLength,
           truncated: content.truncated,
           content: content.text,
+          cached: false,
         },
         null,
         2,
       );
+
+      // 結果をキャッシュ
+      fetchCache.set(cacheKey, result);
+
+      return result;
     } catch (error) {
       if (error instanceof Error) {
         if (error.name === "AbortError") {
@@ -175,36 +203,19 @@ export class WebFetchTool extends StructuredTool {
     // 本文コンテナを探す（優先順位順）
     let content = "";
 
-    // 1. <article>タグを探す
-    const articleMatch = /<article[^>]*>([\s\S]*?)<\/article>/i.exec(cleanedHtml);
-    if (articleMatch?.[1]) {
-      content = articleMatch[1];
-    }
+    // コンテンツセレクタのパターン（優先順位順）
+    const patterns = [
+      /<article[^>]*>([\s\S]*?)<\/article>/i,
+      /<main[^>]*>([\s\S]*?)<\/main>/i,
+      /<div[^>]*class="[^"]*(?:content|post|article|entry|body|text)[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+      /<body[^>]*>([\s\S]*?)<\/body>/i,
+    ];
 
-    // 2. <main>タグを探す
-    if (!content) {
-      const mainMatch = /<main[^>]*>([\s\S]*?)<\/main>/i.exec(cleanedHtml);
-      if (mainMatch?.[1]) {
-        content = mainMatch[1];
-      }
-    }
-
-    // 3. コンテンツ系クラスのdivを探す
-    if (!content) {
-      const contentDivMatch =
-        /<div[^>]*class="[^"]*(?:content|post|article|entry)[^"]*"[^>]*>([\s\S]*?)<\/div>/i.exec(
-          cleanedHtml,
-        );
-      if (contentDivMatch?.[1]) {
-        content = contentDivMatch[1];
-      }
-    }
-
-    // 4. <body>タグから抽出
-    if (!content) {
-      const bodyMatch = /<body[^>]*>([\s\S]*?)<\/body>/i.exec(cleanedHtml);
-      if (bodyMatch?.[1]) {
-        content = bodyMatch[1];
+    for (const pattern of patterns) {
+      const match = pattern.exec(cleanedHtml);
+      if (match?.[1]) {
+        content = match[1];
+        break;
       }
     }
 
@@ -241,15 +252,15 @@ export class WebFetchTool extends StructuredTool {
    * @returns クリーニングされたHTML
    */
   private removeNoise(html: string): string {
+    // パフォーマンスのため、一度の正規表現パスで複数のタグを削除
     return html
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-      .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, "")
-      .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, "")
-      .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, "")
-      .replace(/<aside[^>]*>[\s\S]*?<\/aside>/gi, "")
-      .replace(/<form[^>]*>[\s\S]*?<\/form>/gi, "")
-      .replace(/<!--[\s\S]*?-->/g, "");
+      .replace(
+        /<(script|style|nav|header|footer|aside|form|iframe|noscript)[^>]*>[\s\S]*?<\/\1>/gi,
+        "",
+      )
+      .replace(/<!--[\s\S]*?-->/g, "")
+      .replace(/<meta[^>]*>/gi, "")
+      .replace(/<link[^>]*>/gi, "");
   }
 
   /**
@@ -261,19 +272,38 @@ export class WebFetchTool extends StructuredTool {
    * @returns クリーニングされたテキスト
    */
   private cleanText(html: string): string {
-    return html
-      .replace(/<[^>]*>/g, " ") // HTMLタグ除去
-      .replace(/&nbsp;/g, " ")
-      .replace(/&quot;/g, '"')
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&apos;/g, "'")
-      .replace(/&#39;/g, "'")
-      .replace(/&#(\d+);/g, (_, num) => String.fromCharCode(Number.parseInt(num, 10)))
-      .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)))
-      .replace(/\s+/g, " ") // 連続空白を1つに
-      .trim();
+    // HTMLタグを除去（単一の正規表現で高速化）
+    let text = html.replace(/<[^>]*>/g, " ");
+
+    // HTMLエンティティをデコード（一括処理）
+    const entities: Record<string, string> = {
+      "&nbsp;": " ",
+      "&quot;": '"',
+      "&amp;": "&",
+      "&lt;": "<",
+      "&gt;": ">",
+      "&apos;": "'",
+      "&#39;": "'",
+      "&mdash;": "—",
+      "&ndash;": "–",
+      "&hellip;": "…",
+    };
+
+    // 一般的なエンティティを置換
+    for (const [entity, replacement] of Object.entries(entities)) {
+      text = text.split(entity).join(replacement);
+    }
+
+    // 数値文字参照をデコード
+    text = text.replace(/&#(\d+);/g, (_, num) => String.fromCharCode(Number.parseInt(num, 10)));
+    text = text.replace(/&#x([0-9a-fA-F]+);/g, (_, hex) =>
+      String.fromCharCode(Number.parseInt(hex, 16)),
+    );
+
+    // 連続空白を1つに正規化
+    text = text.replace(/\s+/g, " ");
+
+    return text.trim();
   }
 }
 
