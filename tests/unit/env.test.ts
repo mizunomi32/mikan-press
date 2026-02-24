@@ -29,6 +29,8 @@ describe("env.ts", () => {
     delete process.env.EDITOR_MODEL;
     delete process.env.REVIEWER_MODEL;
     delete process.env.LOG_LEVEL;
+    delete process.env.MAX_RETRIES_PER_AGENT;
+    delete process.env.MAX_REVIEWS;
   });
 
   afterEach(() => {
@@ -174,6 +176,51 @@ describe("env.ts", () => {
       process.env.OPENAI_API_KEY = "sk-test";
       const result = validateEnv();
       expect(result.LOG_LEVEL).toBe("info");
+    });
+  });
+
+  describe("validateEnv - リトライ設定", () => {
+    test("有効な正の整数を受け付ける", () => {
+      process.env.OPENAI_API_KEY = "sk-test";
+      process.env.MAX_RETRIES_PER_AGENT = "5";
+      process.env.MAX_REVIEWS = "10";
+      const result = validateEnv();
+      expect(result.MAX_RETRIES_PER_AGENT).toBe(5);
+      expect(result.MAX_REVIEWS).toBe(10);
+    });
+
+    test("未設定時はデフォルト値(3)を使用", () => {
+      process.env.OPENAI_API_KEY = "sk-test";
+      const result = validateEnv();
+      expect(result.MAX_RETRIES_PER_AGENT).toBe(3);
+      expect(result.MAX_REVIEWS).toBe(3);
+    });
+
+    test("空文字はデフォルト値を使用", () => {
+      process.env.OPENAI_API_KEY = "sk-test";
+      process.env.MAX_RETRIES_PER_AGENT = "";
+      process.env.MAX_REVIEWS = "   ";
+      const result = validateEnv();
+      expect(result.MAX_RETRIES_PER_AGENT).toBe(3);
+      expect(result.MAX_REVIEWS).toBe(3);
+    });
+
+    test("負の数はエラー", () => {
+      process.env.OPENAI_API_KEY = "sk-test";
+      process.env.MAX_RETRIES_PER_AGENT = "-1";
+      expect(() => validateEnv()).toThrow();
+    });
+
+    test("ゼロはエラー", () => {
+      process.env.OPENAI_API_KEY = "sk-test";
+      process.env.MAX_REVIEWS = "0";
+      expect(() => validateEnv()).toThrow();
+    });
+
+    test("非数値はエラー", () => {
+      process.env.OPENAI_API_KEY = "sk-test";
+      process.env.MAX_RETRIES_PER_AGENT = "abc";
+      expect(() => validateEnv()).toThrow();
     });
   });
 
