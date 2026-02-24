@@ -27,3 +27,8 @@ export function withSpinner<T>(label: string, fn: () => Promise<T>): Promise<T> 
   startSpinner(label);
   return fn().finally(() => stopSpinner());
 }
+
+/** スピナーを使用しているかどうか */
+export function isSpinnerActive(): boolean {
+  return intervalId !== null;
+}

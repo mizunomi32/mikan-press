@@ -5,6 +5,7 @@ import { getEnv, validateEnv } from "@/env.js";
 import { AgentError } from "@/errors/index.js";
 import { buildGraph } from "@/graph.js";
 import { logger } from "@/logger.js";
+import { getProgressTracker, resetProgressTracker } from "@/progress.js";
 import { formatContent, type OutputFormat } from "@/utils/formatters.js";
 
 // 起動時に環境変数をバリデーション
@@ -66,6 +67,11 @@ program
       if (skipResearch) logger.info(`   リサーチ: スキップ`);
       logger.info("");
 
+      // 進捗トラッカーを開始
+      resetProgressTracker();
+      const progressTracker = getProgressTracker();
+      progressTracker.start(finalMaxReviews);
+
       const graph = buildGraph();
 
       try {
@@ -89,6 +95,9 @@ program
           editorRetryCount: 0,
         });
 
+        // 進捗トラッカーを完了
+        progressTracker.complete();
+
         logger.info("\n✅ 記事生成が完了しました\n");
         logger.info(`   出力フォーマット: ${outputFormat}`);
 
@@ -104,6 +113,8 @@ program
           console.log("\n---");
         }
       } catch (error) {
+        // エラー時も進捗トラッカーを完了
+        progressTracker.complete();
         handleCliError(error);
         process.exit(1);
       }
