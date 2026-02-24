@@ -47,16 +47,16 @@ const logLevelSchema = z.enum(["error", "warn", "info", "debug"]).default("info"
 const positiveIntegerSchema = z
   .string()
   .transform((val) => (val.trim() === "" ? undefined : val))
-  .refine(
-    (val) => {
-      if (val === undefined) return true;
-      const num = Number.parseInt(val, 10);
-      return !Number.isNaN(num) && num > 0;
-    },
-    (val) => ({
-      message: `"${val}" is not a valid positive integer`,
-    }),
-  )
+  .superRefine((val, ctx) => {
+    if (val === undefined) return;
+    const num = Number.parseInt(val, 10);
+    if (Number.isNaN(num) || num <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `"${val}" is not a valid positive integer`,
+      });
+    }
+  })
   .transform((val) => (val === undefined ? undefined : Number.parseInt(val, 10)));
 
 // 環境変数の基底スキーマ
