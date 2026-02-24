@@ -5,9 +5,15 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { formatContent, toHtml, toJson, toMarkdown, toPlainText } from "../../src/utils/formatters.js";
+import {
+  formatContent,
+  toHtml,
+  toJson,
+  toMarkdown,
+  toPlainText,
+} from "../../src/utils/formatters.js";
 
-const sampleMarkdown = `# サンプル記事
+const _sampleMarkdown = `# サンプル記事
 
 これはサンプルの記事です。
 
@@ -90,7 +96,9 @@ describe("formatters.ts", () => {
       const result = toJson(input);
       const parsed = JSON.parse(result);
 
-      const paragraphSection = parsed.sections.find((s: { type: string }) => s.type === "paragraph");
+      const paragraphSection = parsed.sections.find(
+        (s: { type: string }) => s.type === "paragraph",
+      );
       expect(paragraphSection).toBeDefined();
       expect(paragraphSection.content).toBe("This is a paragraph.");
     });

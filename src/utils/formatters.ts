@@ -29,37 +29,37 @@ export function toHtml(content: string): string {
   let html = content;
 
   // 見出し (h1-h6)
-  html = html.replace(/^######\s+(.+)$/gm, '<h6>$1</h6>');
-  html = html.replace(/^#####\s+(.+)$/gm, '<h5>$1</h5>');
-  html = html.replace(/^####\s+(.+)$/gm, '<h4>$1</h4>');
-  html = html.replace(/^###\s+(.+)$/gm, '<h3>$1</h3>');
-  html = html.replace(/^##\s+(.+)$/gm, '<h2>$1</h2>');
-  html = html.replace(/^#\s+(.+)$/gm, '<h1>$1</h1>');
+  html = html.replace(/^######\s+(.+)$/gm, "<h6>$1</h6>");
+  html = html.replace(/^#####\s+(.+)$/gm, "<h5>$1</h5>");
+  html = html.replace(/^####\s+(.+)$/gm, "<h4>$1</h4>");
+  html = html.replace(/^###\s+(.+)$/gm, "<h3>$1</h3>");
+  html = html.replace(/^##\s+(.+)$/gm, "<h2>$1</h2>");
+  html = html.replace(/^#\s+(.+)$/gm, "<h1>$1</h1>");
 
   // 太字
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
 
   // 斜体
-  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
 
   // コードブロック
-  html = html.replace(/```(\w+)?\n([\s\S]+?)```/g, '<pre><code>$2</code></pre>');
+  html = html.replace(/```(\w+)?\n([\s\S]+?)```/g, "<pre><code>$2</code></pre>");
 
   // インラインコード
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
 
   // リンク
   html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
 
   // 箇条書きリスト
-  html = html.replace(/^\* (.+)$/gm, '<li>$1</li>');
-  html = html.replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>');
-  html = html.replace(/(<li>.*<\/li>)\n(?!<li>)/g, '$1</ul>\n');
-  html = html.replace(/(?<!<\/ul>\n)(<li>)/g, '<ul>$1');
+  html = html.replace(/^\* (.+)$/gm, "<li>$1</li>");
+  html = html.replace(/^(\d+)\. (.+)$/gm, "<li>$2</li>");
+  html = html.replace(/(<li>.*<\/li>)\n(?!<li>)/g, "$1</ul>\n");
+  html = html.replace(/(?<!<\/ul>\n)(<li>)/g, "<ul>$1");
 
   // 段落
-  html = html.replace(/^(?!<[h|u|p|pre])(.+)$/gm, '<p>$1</p>');
-  html = html.replace(/<\/p>\n<p>/g, '</p><p>');
+  html = html.replace(/^(?!<[h|u|p|pre])(.+)$/gm, "<p>$1</p>");
+  html = html.replace(/<\/p>\n<p>/g, "</p><p>");
 
   return `<!DOCTYPE html>
 <html lang="ja">
@@ -194,9 +194,10 @@ export function formatContent(content: string, format: OutputFormat): string {
       return toJson(content);
     case "text":
       return toPlainText(content);
-    default:
+    default: {
       // TypeScriptの exhaustive check を満たすため
       const _exhaustiveCheck: never = format;
       throw new Error(`Unsupported format: ${_exhaustiveCheck}`);
+    }
   }
 }
