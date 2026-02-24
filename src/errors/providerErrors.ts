@@ -9,7 +9,6 @@ import {
   AgentError,
   AuthenticationError,
   ErrorSeverity,
-  MaxRetriesExceededError,
   ModelNotFoundError,
   NetworkError,
   RateLimitError,
@@ -125,9 +124,7 @@ function isTimeoutError(error: unknown): boolean {
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
     return (
-      message.includes("timeout") ||
-      message.includes("timed out") ||
-      message.includes("aborted")
+      message.includes("timeout") || message.includes("timed out") || message.includes("aborted")
     );
   }
   return false;
@@ -180,15 +177,11 @@ function classifyOpenAIError(error: OpenAIErrorLike): AgentError {
   }
 
   if (status === 400) {
-    return new AgentError(
-      `OpenAI リクエストエラー: ${errorMessage}`,
-      ErrorSeverity.USER_ERROR,
-      {
-        provider: "openai",
-        originalError: error as Error,
-        resolutionHint: "リクエストパラメータを確認してください",
-      },
-    );
+    return new AgentError(`OpenAI リクエストエラー: ${errorMessage}`, ErrorSeverity.USER_ERROR, {
+      provider: "openai",
+      originalError: error as Error,
+      resolutionHint: "リクエストパラメータを確認してください",
+    });
   }
 
   // その他のエラー
@@ -420,10 +413,10 @@ export function classifyError(error: unknown, provider: string): AgentError {
       break;
 
     default:
-      return new UnknownProviderError(
-        `不明なプロバイダー: ${provider}`,
-        { provider, originalError: error instanceof Error ? error : undefined },
-      );
+      return new UnknownProviderError(`不明なプロバイダー: ${provider}`, {
+        provider,
+        originalError: error instanceof Error ? error : undefined,
+      });
   }
 
   // 不明なエラー形式の場合

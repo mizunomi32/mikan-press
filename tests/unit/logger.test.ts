@@ -4,7 +4,7 @@
  * ログレベル制御・出力フィルタリングを検証します。
  */
 
-import { describe, expect, test, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
 // テスト実行前に環境変数を設定
 // env.ts や logger.ts が読み込まれる前に設定する必要がある

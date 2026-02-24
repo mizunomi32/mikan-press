@@ -309,7 +309,11 @@ describe("URLValidatorTool", () => {
     test("複数URLの結果が正しく集計される", async () => {
       const responses = [
         { status: 200, statusText: "OK", headers: new Headers() },
-        { status: 301, statusText: "Moved", headers: new Headers({ location: "https://example.com/new" }) },
+        {
+          status: 301,
+          statusText: "Moved",
+          headers: new Headers({ location: "https://example.com/new" }),
+        },
         { status: 404, statusText: "Not Found", headers: new Headers() },
         { status: 200, statusText: "OK", headers: new Headers() },
         { status: 500, statusText: "Error", headers: new Headers() },

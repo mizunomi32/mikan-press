@@ -10,10 +10,7 @@ import { z } from "zod";
 
 // URL検証の入力スキーマ
 const urlValidatorInputSchema = z.object({
-  urls: z
-    .array(z.string().url())
-    .max(10)
-    .describe("検証するURLのリスト（最大10件）"),
+  urls: z.array(z.string().url()).max(10).describe("検証するURLのリスト（最大10件）"),
   timeout: z.number().optional().default(5000).describe("各URLのタイムアウト（ミリ秒）"),
 });
 

@@ -5,7 +5,7 @@
  * parseModelString() のテストは env.test.ts に移動しました。
  */
 
-import { describe, expect, test, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
 // テスト実行前に環境変数を設定
 // env.ts や logger.ts が読み込まれる前に設定する必要がある
@@ -22,9 +22,9 @@ function setupTestEnv(): void {
 // テスト開始前に環境変数を設定
 setupTestEnv();
 
+import { createModel } from "../../src/config.js";
 // 環境変数設定後にモジュールをインポート
 import { clearEnvCache } from "../../src/env.js";
-import { createModel } from "../../src/config.js";
 
 beforeEach(() => {
   clearEnvCache();

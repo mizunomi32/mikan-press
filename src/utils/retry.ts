@@ -30,11 +30,7 @@ export interface RetryConfig {
 /**
  * リトライ時のコールバック関数
  */
-export type RetryCallback = (
-  attempt: number,
-  error: Error,
-  delayMs: number,
-) => void;
+export type RetryCallback = (attempt: number, error: Error, delayMs: number) => void;
 
 // ============================================================================
 // デフォルト設定
@@ -71,7 +67,7 @@ export function sleep(ms: number): Promise<void> {
  * @returns 待機時間（ミリ秒）
  */
 export function calculateBackoffDelay(attempt: number, config: RetryConfig): number {
-  const delay = config.initialDelayMs * Math.pow(config.backoffFactor, attempt);
+  const delay = config.initialDelayMs * config.backoffFactor ** attempt;
   return Math.min(delay, config.maxDelayMs);
 }
 

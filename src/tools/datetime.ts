@@ -18,7 +18,7 @@ const dateTimeInputSchema = z.object({
 });
 
 /** 曜日の日本語名 */
-const WEEKDAYS_JA = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"];
+const _WEEKDAYS_JA = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"];
 
 /**
  * 日時ツール
@@ -86,12 +86,17 @@ export class DateTimeTool extends StructuredTool {
     // ISO形式
     const iso = now.toISOString();
 
-    // タイムゾーンを考慮したフォーマット
-    const formatter = new Intl.DateTimeFormat("ja-JP", {
+    // 日本語フォーマット用（曜日なし）
+    const formatterDate = new Intl.DateTimeFormat("ja-JP", {
       timeZone: timezone,
       year: "numeric",
       month: "long",
       day: "numeric",
+    });
+
+    // 曜日用
+    const formatterWeekday = new Intl.DateTimeFormat("ja-JP", {
+      timeZone: timezone,
       weekday: "long",
     });
 
@@ -103,25 +108,20 @@ export class DateTimeTool extends StructuredTool {
     });
 
     // 各パーツを取得
-    const parts = formatter.formatToParts(now);
     const partsShort = formatterShort.formatToParts(now);
-
-    const year = parts.find((p) => p.type === "year")?.value ?? "";
-    const month = parts.find((p) => p.type === "month")?.value ?? "";
-    const day = parts.find((p) => p.type === "day")?.value ?? "";
-    const weekday = parts.find((p) => p.type === "weekday")?.value ?? "";
 
     const yearShort = partsShort.find((p) => p.type === "year")?.value ?? "";
     const monthShort = partsShort.find((p) => p.type === "month")?.value ?? "";
     const dayShort = partsShort.find((p) => p.type === "day")?.value ?? "";
 
-    // 日本語フォーマット（2024年2月24日） - format()を使用して正しい形式を取得
-    const fullFormatted = formatter.format(now);
-    // "2024年2月24日 火曜日" から日付部分だけを抽出
-    const formatted = fullFormatted.split(" ")[0] ?? fullFormatted;
+    // 日本語フォーマット（2024年2月24日）
+    const formatted = formatterDate.format(now);
 
     // 短いフォーマット（2024-02-24）
     const formattedShort = `${yearShort}-${monthShort.padStart(2, "0")}-${dayShort.padStart(2, "0")}`;
+
+    // 曜日
+    const weekday = formatterWeekday.format(now);
 
     return JSON.stringify(
       {
@@ -151,7 +151,7 @@ export class DateTimeTool extends StructuredTool {
   ): string {
     const date = targetDate ? new Date(targetDate) : new Date();
 
-    if (isNaN(date.getTime())) {
+    if (Number.isNaN(date.getTime())) {
       return JSON.stringify(
         {
           error: "無効な日付形式です",
@@ -204,7 +204,7 @@ export class DateTimeTool extends StructuredTool {
     const second = partsMap.get("second") ?? "";
 
     // 簡易フォーマット置換
-    let formatted = format
+    const formatted = format
       .replace(/YYYY/g, year)
       .replace(/YY/g, year.slice(-2))
       .replace(/MM/g, month)
@@ -249,7 +249,7 @@ export class DateTimeTool extends StructuredTool {
     }
 
     const target = new Date(targetDate);
-    if (isNaN(target.getTime())) {
+    if (Number.isNaN(target.getTime())) {
       return JSON.stringify(
         {
           error: "無効な日付形式です",
@@ -271,7 +271,7 @@ export class DateTimeTool extends StructuredTool {
     });
 
     // 日付部分のみの文字列を取得して比較
-    const nowDateStr = formatter.format(now).replace(/\//g, "-");
+    const _nowDateStr = formatter.format(now).replace(/\//g, "-");
     const targetDateStr = formatter.format(target).replace(/\//g, "-");
 
     // 日数差を計算（ミリ秒 → 日）
@@ -324,7 +324,7 @@ export class DateTimeTool extends StructuredTool {
 
     const baseDate = targetDate ? new Date(targetDate) : new Date();
 
-    if (isNaN(baseDate.getTime())) {
+    if (Number.isNaN(baseDate.getTime())) {
       return JSON.stringify(
         {
           error: "無効な日付形式です",

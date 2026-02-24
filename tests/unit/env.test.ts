@@ -4,7 +4,7 @@
  * 環境変数のバリデーション機能を検証します。
  */
 
-import { describe, expect, test, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { clearEnvCache, envSchema, getEnv, parseModelString, validateEnv } from "../../src/env.js";
 
 // 元の環境変数をバックアップ
@@ -187,7 +187,7 @@ describe("env.ts", () => {
 
     test("キャッシュクリア後に再取得すると新しい値を返す", () => {
       process.env.OPENAI_API_KEY = "sk-test";
-      const result1 = getEnv();
+      const _result1 = getEnv();
 
       clearEnvCache();
       process.env.OPENAI_API_KEY = "sk-test-2";

@@ -42,7 +42,12 @@ describe("E2E: Workflow Graph Structure", () => {
     });
 
     test("リトライ用の自己ループエッジが定義される", () => {
-      const selfLoops = ["researcher → researcher", "planner → planner", "writer → writer", "editor → editor"];
+      const selfLoops = [
+        "researcher → researcher",
+        "planner → planner",
+        "writer → writer",
+        "editor → editor",
+      ];
       expect(selfLoops).toHaveLength(4);
     });
 
@@ -89,7 +94,8 @@ describe("E2E: Workflow State Transitions", () => {
         maxRetriesPerAgent: 1,
         status: "researching",
       };
-      const shouldRetry1 = state1.needRetry && state1.researcherRetryCount <= state1.maxRetriesPerAgent;
+      const shouldRetry1 =
+        state1.needRetry && state1.researcherRetryCount <= state1.maxRetriesPerAgent;
       expect(shouldRetry1).toBe(true);
 
       // 2回目: PROCEED

@@ -1,11 +1,11 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "bun:test";
+import { describe, expect, it, vi } from "bun:test";
+import { AgentError, ErrorSeverity, MaxRetriesExceededError } from "@/errors/index.js";
 import {
-  withRetry,
   calculateBackoffDelay,
   DEFAULT_RETRY_CONFIG,
   type RetryConfig,
+  withRetry,
 } from "@/utils/retry.js";
-import { AgentError, ErrorSeverity, MaxRetriesExceededError } from "@/errors/index.js";
 
 describe("retry utils", () => {
   describe("calculateBackoffDelay", () => {
@@ -64,11 +64,9 @@ describe("retry utils", () => {
     });
 
     it("リトライ可能なエラーは指定回数リトライする", async () => {
-      const retryableError = new AgentError(
-        "Rate limit",
-        ErrorSeverity.RETRYABLE,
-        { provider: "openai" },
-      );
+      const retryableError = new AgentError("Rate limit", ErrorSeverity.RETRYABLE, {
+        provider: "openai",
+      });
       const fn = vi
         .fn()
         .mockRejectedValueOnce(retryableError)
@@ -79,9 +77,9 @@ describe("retry utils", () => {
 
       // sleepをモック（Bunの方式）
       const originalSetTimeout = global.setTimeout;
-      let sleepCallCount = 0;
+      let _sleepCallCount = 0;
       global.setTimeout = ((callback: () => void) => {
-        sleepCallCount++;
+        _sleepCallCount++;
         callback();
         return 0 as unknown as ReturnType<typeof setTimeout>;
       }) as typeof setTimeout;
@@ -97,11 +95,9 @@ describe("retry utils", () => {
     });
 
     it("最大リトライ回数に達したら MaxRetriesExceededError をスロー", async () => {
-      const retryableError = new AgentError(
-        "Rate limit",
-        ErrorSeverity.RETRYABLE,
-        { provider: "openai" },
-      );
+      const retryableError = new AgentError("Rate limit", ErrorSeverity.RETRYABLE, {
+        provider: "openai",
+      });
       const fn = vi.fn().mockRejectedValue(retryableError);
 
       // sleepをモック
@@ -122,11 +118,9 @@ describe("retry utils", () => {
     });
 
     it("リトライ不可能なエラーは即座にスロー", async () => {
-      const fatalError = new AgentError(
-        "Authentication failed",
-        ErrorSeverity.USER_ERROR,
-        { provider: "openai" },
-      );
+      const fatalError = new AgentError("Authentication failed", ErrorSeverity.USER_ERROR, {
+        provider: "openai",
+      });
       const fn = vi.fn().mockRejectedValue(fatalError);
 
       await expect(withRetry(fn, DEFAULT_RETRY_CONFIG, "openai")).rejects.toThrow(AgentError);
@@ -142,15 +136,10 @@ describe("retry utils", () => {
     });
 
     it("onRetryコールバックに正しい引数が渡される", async () => {
-      const retryableError = new AgentError(
-        "Rate limit",
-        ErrorSeverity.RETRYABLE,
-        { provider: "openai" },
-      );
-      const fn = vi
-        .fn()
-        .mockRejectedValueOnce(retryableError)
-        .mockResolvedValue("success");
+      const retryableError = new AgentError("Rate limit", ErrorSeverity.RETRYABLE, {
+        provider: "openai",
+      });
+      const fn = vi.fn().mockRejectedValueOnce(retryableError).mockResolvedValue("success");
 
       const onRetry = vi.fn();
 

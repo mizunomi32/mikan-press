@@ -27,11 +27,7 @@ const revisionConfig: RevisionConfig<WriterRevisionInput, typeof writerRevisionI
   inputSchema: writerRevisionInputSchema,
 };
 
-const config: ToolEnabledAgentConfig<
-  WriterInput,
-  "writerRetryCount",
-  typeof writerInputSchema
-> = {
+const config: ToolEnabledAgentConfig<WriterInput, "writerRetryCount", typeof writerInputSchema> = {
   name: "Writer",
   modelType: "writer",
   systemPrompt: WRITER_SYSTEM,
