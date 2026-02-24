@@ -87,10 +87,7 @@ const AGENT_TO_PROMPT_NAME: Record<string, string> = {
  * @param version - プロンプトバージョン（オプション、指定しない場合は環境変数またはデフォルト: 1）
  * @returns プロンプトファイル
  */
-export async function loadAgentPrompt(
-  agentName: string,
-  version?: number,
-): Promise<PromptFile> {
+export async function loadAgentPrompt(agentName: string, version?: number): Promise<PromptFile> {
   const promptName = AGENT_TO_PROMPT_NAME[agentName];
   if (!promptName) {
     throw new Error(`未知のエージェント名: ${agentName}`);
@@ -106,7 +103,7 @@ export async function loadAgentPrompt(
       `[PromptLoader] ${agentName} エージェントのプロンプトを読み込みました: v${targetVersion}`,
     );
     return promptFile;
-  } catch (error) {
+  } catch (_error) {
     // YAMLファイルが見つからない場合はフォールバック
     logger.warn(
       `[PromptLoader] YAMLプロンプトファイルが見つかりません: ${promptName} v${targetVersion}（フォールバック使用）`,
@@ -142,10 +139,7 @@ export async function loadAgentPrompt(
  * @param version - プロンプトバージョン（オプション）
  * @returns システムプロンプト文字列
  */
-export async function getSystemPrompt(
-  agentName: string,
-  version?: number,
-): Promise<string> {
+export async function getSystemPrompt(agentName: string, version?: number): Promise<string> {
   const prompt = await loadAgentPrompt(agentName, version);
   return prompt.system;
 }
@@ -157,10 +151,7 @@ export async function getSystemPrompt(
  * @param version - プロンプトバージョン（オプション）
  * @returns ヒューマンプロンプト文字列
  */
-export async function getHumanPrompt(
-  agentName: string,
-  version?: number,
-): Promise<string> {
+export async function getHumanPrompt(agentName: string, version?: number): Promise<string> {
   const prompt = await loadAgentPrompt(agentName, version);
   return prompt.human;
 }

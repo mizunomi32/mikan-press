@@ -1,12 +1,12 @@
 import type { Tool } from "@langchain/core/tools";
 import { createToolEnabledAgent, type ToolEnabledAgentConfig } from "@/agents/agentFactory.js";
-import { getSystemPrompt, getHumanPrompt } from "@/prompts/loader.js";
+import { logger } from "@/logger.js";
+import { getHumanPrompt, getSystemPrompt } from "@/prompts/loader.js";
 import { RESEARCHER_HUMAN, RESEARCHER_SYSTEM } from "@/prompts/researcher.js";
+import type { ArticleState } from "@/state.js";
 import { webFetchTool } from "@/tools/fetch.js";
 import { webSearchTool } from "@/tools/search.js";
-import { logger } from "@/logger.js";
 import { type ResearcherInput, researcherInputSchema } from "@/types/prompts.js";
-import { ArticleState } from "@/state.js";
 
 /**
  * Researcherエージェントのプロンプトを取得
@@ -78,9 +78,9 @@ export const researcherNode = createToolEnabledAgent(fallbackConfig);
  * @param version - プロンプトバージョン（オプション、指定しない場合は環境変数またはデフォルト: 1）
  * @returns LangGraphノード関数
  */
-export async function createResearcherNode(version?: number): Promise<
-  (state: typeof ArticleState.State) => Promise<Partial<typeof ArticleState.State>>
-> {
+export async function createResearcherNode(
+  _version?: number,
+): Promise<(state: typeof ArticleState.State) => Promise<Partial<typeof ArticleState.State>>> {
   const { systemPrompt, humanPromptTemplate } = await getResearcherPrompts();
 
   const config: ToolEnabledAgentConfig<

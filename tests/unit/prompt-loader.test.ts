@@ -3,9 +3,9 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import { clearPromptCache, loadPrompt } from "@/prompts/reader.js";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { clearPromptCache, loadPrompt } from "@/prompts/reader.js";
 
 // テスト用のプロンプトディレクトリ
 const __filename = fileURLToPath(import.meta.url);
@@ -27,9 +27,9 @@ describe("PromptReader", () => {
 
     it("プロンプトファイルが見つからない場合はエラーを投げる", async () => {
       clearPromptCache();
-      await expect(
-        loadPrompt("nonexistent", 1, testPromptsDir),
-      ).rejects.toThrow("プロンプトファイルが見つかりません");
+      await expect(loadPrompt("nonexistent", 1, testPromptsDir)).rejects.toThrow(
+        "プロンプトファイルが見つかりません",
+      );
     });
 
     it("同じバージョンのプロンプトを2回目はキャッシュから返す", async () => {

@@ -38,6 +38,7 @@ export async function loadPrompt(
 
   // キャッシュをチェック
   if (promptCache.has(cacheKey)) {
+    // biome-ignore lint/style/noNonNullAssertion: キャッシュヒット時は非nullが保証される
     return promptCache.get(cacheKey)!;
   }
 
@@ -55,10 +56,7 @@ export async function loadPrompt(
       content = await readFile(filePath, "utf-8");
       found = true;
       break;
-    } catch {
-      // ファイルが見つからない場合は次の拡張子を試す
-      continue;
-    }
+    } catch {}
   }
 
   if (!found || content === null) {
@@ -73,8 +71,10 @@ export async function loadPrompt(
   let promptFile: PromptFile;
   try {
     if (filePath.endsWith(".json")) {
+      // biome-ignore lint/style/noNonNullAssertion: contentはfound=trueのときに非nullが保証される
       promptFile = JSON.parse(content!) as PromptFile;
     } else {
+      // biome-ignore lint/style/noNonNullAssertion: contentはfound=trueのときに非nullが保証される
       promptFile = yamlParse(content!) as PromptFile;
     }
   } catch (error) {
