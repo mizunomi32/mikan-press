@@ -58,6 +58,7 @@ program
         editorRetryCount: 0,
         todos: createInitialTodos(!!skipResearch),
         currentTodoId: null,
+        todoCounter: 5, // 初期TODOの数（researcher, planner, writer, editor, reviewer）
       });
 
       logger.info("\n✅ 記事生成が完了しました\n");

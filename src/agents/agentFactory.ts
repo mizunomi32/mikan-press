@@ -8,6 +8,7 @@
 
 import type { AIMessage } from "@langchain/core/messages";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
+import type { StructuredToolInterface } from "@langchain/core/tools";
 import type { z } from "zod";
 import { type AgentRole, createModel } from "@/config.js";
 import { logger } from "@/logger.js";
@@ -15,7 +16,6 @@ import { withSpinner } from "@/spinner.js";
 import type { ArticleState } from "@/state.js";
 import { logTokenUsage } from "@/tokenUsage.js";
 import { validatePromptInput } from "@/types/prompts.js";
-import { withModelRetry } from "@/utils/retry.js";
 import { createInitialTodos, logProgress, updateTodoStatus } from "@/utils/todoManager.js";
 
 // ============================================================================
@@ -90,6 +90,18 @@ export interface RevisionConfig<
 }
 
 /**
+ * ツール対応エージェントの設定オブジェクト
+ */
+export interface ToolEnabledAgentConfig<
+  TInput extends Record<string, unknown>,
+  TRetryKey extends RetryKey,
+  TInputSchema extends z.ZodType,
+> extends AgentConfig<TInput, TRetryKey, TInputSchema> {
+  /** モデルにバインドするツール群 */
+  tools?: StructuredToolInterface[];
+}
+
+/**
  * Reviewer専用エージェントの設定オブジェクト
  */
 export interface ReviewerAgentConfig<TInputSchema extends z.ZodType> {
@@ -147,6 +159,96 @@ export async function executeAgentChain<T extends Record<string, unknown>>(
   const result = await withSpinner(`[${agentName}] 思考中...`, () => chain.invoke(input));
   logTokenUsage(agentName, result as unknown);
   return result as AIMessage;
+}
+
+/**
+ * ツール対応モデルチェーン実行（ツールコールループ付き）
+ *
+ * @param agentName - エージェント名（ログ用）
+ * @param modelType - モデル種別
+ * @param prompt - チャットプロンプトテンプレート
+ * @param input - プロンプト入力値
+ * @param tools - モデルにバインドするツール群
+ * @returns AI応答メッセージとツール使用フラグ
+ */
+export async function executeToolEnabledAgentChain<T extends Record<string, unknown>>(
+  agentName: string,
+  modelType: AgentRole,
+  prompt: ChatPromptTemplate,
+  input: T,
+  tools: StructuredToolInterface[],
+): Promise<{ result: AIMessage; toolCallsUsed: boolean }> {
+  const model = createModel(modelType);
+
+  // ツールがない場合は通常のチェーン実行
+  if (tools.length === 0) {
+    const result = await executeAgentChain(agentName, modelType, prompt, input);
+    return { result, toolCallsUsed: false };
+  }
+
+  // ツールをバインドしたモデルを作成
+  if (!model.bindTools) {
+    throw new Error(`Model for ${agentName} does not support bindTools`);
+  }
+  const modelWithTools = model.bindTools(tools);
+  const chain = prompt.pipe(modelWithTools);
+
+  let toolCallsUsed = false;
+  let currentResult = await withSpinner(`[${agentName}] 思考中...`, () => chain.invoke(input));
+
+  logTokenUsage(agentName, currentResult as unknown);
+
+  // ツールコールループ（最大10回）
+  const maxToolIterations = 10;
+  let iteration = 0;
+
+  while (iteration < maxToolIterations) {
+    // ツールコールがあるか確認
+    const toolCalls = (currentResult as unknown as { tool_calls?: unknown[] }).tool_calls;
+
+    if (!toolCalls || toolCalls.length === 0) {
+      // ツールコールがない場合、ループ終了
+      break;
+    }
+
+    toolCallsUsed = true;
+    iteration++;
+
+    // ツール実行ログ
+    logger.debug(`[${agentName}] ツールコール実行中（${iteration}回目）...`);
+
+    // 各ツールを実行
+    for (const toolCall of toolCalls) {
+      const tc = toolCall as { name: string; args: Record<string, unknown>; id: string };
+      logger.info(`[${agentName}] ツール呼び出し: ${tc.name}(${JSON.stringify(tc.args)})`);
+
+      // ツールを検索して実行
+      const tool = tools.find((t) => t.name === tc.name);
+      if (tool) {
+        try {
+          const toolResult = await tool.invoke(tc.args);
+          logger.debug(`[${agentName}] ツール結果: ${toolResult}`);
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          logger.error(`[${agentName}] ツール実行エラー (${tc.name}): ${errorMessage}`);
+        }
+      } else {
+        logger.warn(`[${agentName}] 不明なツール: ${tc.name}`);
+      }
+    }
+
+    // ツール実行後、再度モデルを呼び出して結果を反映
+    currentResult = await withSpinner(`[${agentName}] 処理継続中...`, () =>
+      chain.invoke(input),
+    );
+    logTokenUsage(agentName, currentResult as unknown);
+  }
+
+  if (iteration >= maxToolIterations) {
+    logger.warn(`[${agentName}] ツールコールの最大反復回数（${maxToolIterations}）に達しました`);
+  }
+
+  return { result: currentResult as AIMessage, toolCallsUsed };
 }
 
 // ============================================================================

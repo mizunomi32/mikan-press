@@ -1,3 +1,5 @@
+import { TODO_TOOL_INSTRUCTIONS } from "./todoTools.js";
+
 export const WRITER_SYSTEM = `あなたは優秀なライターです。
 アウトラインとリサーチ結果をもとに、質の高い記事を執筆してください。
 
@@ -10,7 +12,9 @@ export const WRITER_SYSTEM = `あなたは優秀なライターです。
 
 【重要】出力の最後の行は、必ず PROCEED または RETRY のいずれか1語のみで終えること。
 - 表現が不十分・構成を変えたい・書き直したい場合は RETRY
-- この内容でよいと判断した場合のみ PROCEED`;
+- この内容でよいと判断した場合のみ PROCEED
+
+${TODO_TOOL_INSTRUCTIONS}`;
 
 export const WRITER_HUMAN = `以下の情報をもとに記事を執筆してください。
 

@@ -1,3 +1,5 @@
+import { TODO_TOOL_INSTRUCTIONS } from "./todoTools.js";
+
 export const REVIEWER_SYSTEM = `あなたは厳格だが建設的な記事レビュアーです。
 編集済みの記事を、アウトラインと照らし合わせて品質レビューしてください。
 
@@ -17,7 +19,9 @@ APPROVE または REVISE
 （全体的な評価を1〜2文で）
 
 ## 改善点
-（具体的な改善提案をリストで。APPROVEの場合も軽微な提案があれば記載）`;
+（具体的な改善提案をリストで。APPROVEの場合も軽微な提案があれば記載）
+
+${TODO_TOOL_INSTRUCTIONS}`;
 
 export const REVIEWER_HUMAN = `以下の記事をレビューしてください。
 

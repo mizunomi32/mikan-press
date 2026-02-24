@@ -9,7 +9,7 @@ export type TodoStatus = "pending" | "in_progress" | "completed" | "skipped";
  * TODOタスクの項目
  */
 export interface TodoItem {
-  /** タスクID（エージェント名と対応） */
+  /** タスクID（自動生成: todo_1, todo_2... または初期値はエージェント名と対応） */
   id: string;
   /** タスク名（表示用） */
   name: string;
@@ -21,6 +21,14 @@ export interface TodoItem {
   completedAt?: string;
   /** 試行回数 */
   attemptCount: number;
+  /** タスクの詳細説明 */
+  description?: string;
+  /** 担当エージェント（researcher, planner, writer, editor, reviewer） */
+  assignedAgent?: string;
+  /** 作成者エージェント */
+  createdBy?: string;
+  /** メモ（進捗や補足情報） */
+  notes?: string[];
 }
 
 export const ArticleState = Annotation.Root({
@@ -48,4 +56,6 @@ export const ArticleState = Annotation.Root({
   // TODO管理
   todos: Annotation<TodoItem[]>,
   currentTodoId: Annotation<string | null>,
+  /** ユニークID生成用カウンター */
+  todoCounter: Annotation<number>,
 });
